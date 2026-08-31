@@ -1,0 +1,6 @@
+{
+  "name": "KPMBP Student Talent & Opportunity Platform",
+  "description": "Internal platform for KPMBP administration to discover, invite, screen, and select student talents for opportunities, activities, and representation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
