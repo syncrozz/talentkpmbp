@@ -608,49 +608,24 @@ export const AdminPortal: React.FC = () => {
       {/* Admin Top Banner */}
       <div className="bg-slate-900 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Section Header: Title & Unit Badge separated into 2 distinct rows */}
+          <div className="w-full flex flex-col gap-2">
+            {/* Row 1: Main Console Title */}
             <div>
-              <div className="flex items-center space-x-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold uppercase">
-                  Pusat Kawalan Pentadbir
-                </span>
-                <span className="text-xs text-slate-400">Unit Hal Ehwal Pelajar &amp; Bakat</span>
-              </div>
-              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight mt-1">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight">
                 KPMBP Student Talent &amp; Screening Console
               </h1>
             </div>
 
-            {/* Authenticated Admin Badge & Logout */}
-            <div className="flex items-center space-x-3 bg-slate-950 p-2 rounded-xl border border-slate-800 self-start md:self-auto">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-1.5">
-                  <span className={`w-2 h-2 rounded-full ${
-                    isSuperAdmin ? 'bg-purple-400' : isReviewer ? 'bg-emerald-400' : 'bg-blue-400'
-                  }`}></span>
-                  <span className="text-xs font-bold text-white truncate max-w-[180px]">{adminUser.name}</span>
-                </div>
-                <div className="flex items-center space-x-1 text-[10px]">
-                  <span className={`px-1.5 py-0.2 rounded font-bold uppercase ${
-                    isSuperAdmin ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                    isReviewer ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                    'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                  }`}>
-                    {adminUser.role}
-                  </span>
-                  <span className="text-slate-500 truncate max-w-[140px]">{adminUser.department}</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                id="btn-admin-logout"
-                onClick={handleLogout}
-                className="p-2 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg transition-colors"
-                title="Log Keluar Pentadbir"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+            {/* Row 2: Badge & Department Subtitle */}
+            <div className="flex items-center space-x-2">
+              <span className="px-2.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold uppercase tracking-wide">
+                Pusat Kawalan Pentadbir
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-xs text-slate-400 font-medium">
+                Unit Hal Ehwal Pelajar &amp; Bakat
+              </span>
             </div>
           </div>
 
@@ -813,6 +788,37 @@ export const AdminPortal: React.FC = () => {
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
               <span>SES 4.4 Sandbox</span>
+            </button>
+          </div>
+
+          {/* Bottom Row: Authenticated Admin Status & Logout Bar */}
+          <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 px-4 py-2.5 rounded-xl border border-slate-800 w-full">
+            <div className="flex items-center space-x-3">
+              <span className={`w-2.5 h-2.5 rounded-full ${
+                isSuperAdmin ? 'bg-purple-400' : isReviewer ? 'bg-emerald-400' : 'bg-blue-400'
+              }`}></span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-xs font-bold text-white">{adminUser.name}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  isSuperAdmin ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                  isReviewer ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                  'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                }`}>
+                  {adminUser.role}
+                </span>
+                <span className="text-xs text-slate-400">({adminUser.department})</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="btn-admin-logout"
+              onClick={handleLogout}
+              className="flex items-center space-x-1.5 px-3 py-1.5 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg transition-colors text-xs font-medium border border-transparent hover:border-slate-700 self-end sm:self-auto"
+              title="Log Keluar Pentadbir"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Keluar</span>
             </button>
           </div>
         </div>
