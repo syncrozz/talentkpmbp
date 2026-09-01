@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { StudentPortal } from './components/StudentPortal.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
-import { SES43Sandbox } from './components/SES43Sandbox.tsx';
-import { GraduationCap, ShieldCheck, Sparkles, Heart } from 'lucide-react';
+import { SES44Sandbox } from './components/SES44Sandbox.tsx';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'student' | 'admin' | 'sandbox'>('student');
@@ -67,26 +66,29 @@ export default function App() {
         )}
 
         {currentView === 'sandbox' && (
-          <SES43Sandbox />
+          <SES44Sandbox />
         )}
       </main>
 
-      {/* Modern Compact Footer */}
-      <footer className="bg-slate-950 border-t border-slate-900 py-8 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <GraduationCap className="w-4 h-4 text-blue-400" />
-            <span className="font-semibold text-slate-300">
-              KPMBP STUDENT TALENT &amp; OPPORTUNITY PLATFORM
-            </span>
-            <span className="text-[10px] px-2 py-0.5 bg-blue-900/30 text-blue-300 rounded border border-blue-800/40">
-              SES 4.3 ARCHITECTURE
-            </span>
-          </div>
-
-          <div className="text-center md:text-right text-[11px] text-slate-400">
-            Kolej Profesional MARA Bandar Penawar • One Student. Many Opportunities.
-          </div>
+      {/* SES 4.4 Standard Footer with WhatsApp Shortcut */}
+      <footer className="bg-slate-950 border-t border-slate-900/80 py-6 px-4 text-center">
+        <div className="inline-flex items-center justify-center space-x-2 text-xs text-slate-500 font-medium tracking-wide">
+          <span>Developed by Syncrozz</span>
+          <a
+            id="link-footer-whatsapp-syncrozz"
+            href="https://wa.me/6145313756"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Hubungi Syncrozz via WhatsApp"
+            className="inline-flex items-center justify-center transition-transform duration-200 hover:scale-110 opacity-85 hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 rounded align-middle"
+          >
+            <img
+              src="https://raw.githubusercontent.com/syncrozz/syncrozz-assets/main/logo/MAIN/Logo%20Whatapp%20v2.png"
+              alt="WhatsApp Syncrozz"
+              className="w-[19px] h-[19px] object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </a>
         </div>
       </footer>
 

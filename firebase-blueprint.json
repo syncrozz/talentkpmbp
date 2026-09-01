@@ -1,0 +1,258 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Talent categories such as Music, Public Speaking, Creative, CSR, etc.",
+      "type": "object",
+      "properties": {
+        "category_id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["category_id", "name", "slug"]
+    },
+    "Skill": {
+      "title": "Skill",
+      "description": "Talent skills linked to a category.",
+      "type": "object",
+      "properties": {
+        "skill_id": { "type": "string" },
+        "skill_name": { "type": "string" },
+        "category_id": { "type": "string" },
+        "category_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["skill_id", "skill_name", "category_id", "status"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Master student profile record.",
+      "type": "object",
+      "properties": {
+        "student_id": { "type": "string" },
+        "student_id_number": { "type": "string" },
+        "full_name": { "type": "string" },
+        "preferred_name": { "type": "string" },
+        "programme": { "type": "string" },
+        "semester": { "type": "number" },
+        "class": { "type": "string" },
+        "gender": { "type": "string", "enum": ["LELAKI", "PEREMPUAN"] },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "GRADUATED"] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["student_id", "student_id_number", "full_name", "programme", "semester", "phone", "email", "status"]
+    },
+    "StudentSkill": {
+      "title": "StudentSkill",
+      "description": "Skills linked to a student profile.",
+      "type": "object",
+      "properties": {
+        "student_skill_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "skill_id": { "type": "string" },
+        "skill_name": { "type": "string" },
+        "category_name": { "type": "string" },
+        "skill_level": { "type": "string", "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+        "experience_duration": { "type": "string" },
+        "is_primary": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["student_skill_id", "student_id", "skill_id", "skill_level", "is_primary"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Talent open call opportunity.",
+      "type": "object",
+      "properties": {
+        "opportunity_id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "category_id": { "type": "string" },
+        "category_name": { "type": "string" },
+        "description": { "type": "string" },
+        "open_call_roles": { "type": "array" },
+        "opening_date": { "type": "string" },
+        "closing_date": { "type": "string" },
+        "status": { "type": "string", "enum": ["DRAFT", "OPEN", "CLOSED", "ARCHIVED"] },
+        "banner_tag": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "total_applications": { "type": "number" }
+      },
+      "required": ["opportunity_id", "title", "slug", "category_id", "description", "status"]
+    },
+    "OpportunityQuestion": {
+      "title": "OpportunityQuestion",
+      "description": "Dynamic form questions for an opportunity.",
+      "type": "object",
+      "properties": {
+        "question_id": { "type": "string" },
+        "opportunity_id": { "type": "string" },
+        "question_text": { "type": "string" },
+        "question_type": { "type": "string" },
+        "placeholder": { "type": "string" },
+        "help_text": { "type": "string" },
+        "is_required": { "type": "boolean" },
+        "sort_order": { "type": "number" },
+        "options": { "type": "array" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["question_id", "opportunity_id", "question_text", "question_type", "is_required"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Application submitted by student for an opportunity.",
+      "type": "object",
+      "properties": {
+        "application_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "opportunity_id": { "type": "string" },
+        "status": { "type": "string" },
+        "submitted_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "reviewed_by": { "type": "string" },
+        "reviewed_at": { "type": "string" },
+        "admin_notes": { "type": "string" }
+      },
+      "required": ["application_id", "student_id", "opportunity_id", "status", "submitted_at"]
+    },
+    "ApplicationResponse": {
+      "title": "ApplicationResponse",
+      "description": "Individual question response for an application.",
+      "type": "object",
+      "properties": {
+        "response_id": { "type": "string" },
+        "application_id": { "type": "string" },
+        "question_id": { "type": "string" },
+        "question_text": { "type": "string" },
+        "response_value": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["response_id", "application_id", "question_id"]
+    },
+    "ApplicationStatusHistory": {
+      "title": "ApplicationStatusHistory",
+      "description": "Audit trail of application status transitions.",
+      "type": "object",
+      "properties": {
+        "history_id": { "type": "string" },
+        "application_id": { "type": "string" },
+        "old_status": { "type": "string" },
+        "new_status": { "type": "string" },
+        "changed_by": { "type": "string" },
+        "changed_at": { "type": "string" },
+        "remarks": { "type": "string" }
+      },
+      "required": ["history_id", "application_id", "new_status", "changed_by", "changed_at"]
+    },
+    "AdminNote": {
+      "title": "AdminNote",
+      "description": "Confidential evaluation note added by panel admin.",
+      "type": "object",
+      "properties": {
+        "note_id": { "type": "string" },
+        "application_id": { "type": "string" },
+        "admin_id": { "type": "string" },
+        "admin_name": { "type": "string" },
+        "note": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["note_id", "application_id", "admin_id", "admin_name", "note", "created_at"]
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "Direct invitation sent from admin to student.",
+      "type": "object",
+      "properties": {
+        "invitation_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "opportunity_id": { "type": "string" },
+        "invited_by": { "type": "string" },
+        "invited_by_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED", "DECLINED"] },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["invitation_id", "student_id", "opportunity_id", "invited_by", "status", "created_at"]
+    },
+    "ParticipationRecord": {
+      "title": "ParticipationRecord",
+      "description": "Official college talent involvement history.",
+      "type": "object",
+      "properties": {
+        "participation_id": { "type": "string" },
+        "student_id": { "type": "string" },
+        "opportunity_id": { "type": "string" },
+        "opportunity_title": { "type": "string" },
+        "category": { "type": "string" },
+        "role_achieved": { "type": "string" },
+        "year": { "type": "number" },
+        "status": { "type": "string", "enum": ["COMPLETED", "ONGOING"] },
+        "verified_at": { "type": "string" }
+      },
+      "required": ["participation_id", "student_id", "opportunity_id", "opportunity_title", "category", "role_achieved", "year", "status"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Talent categories"
+    },
+    "/skills/{skillId}": {
+      "schema": "Skill",
+      "description": "Talent master skills"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Master student records"
+    },
+    "/student_skills/{studentSkillId}": {
+      "schema": "StudentSkill",
+      "description": "Student skills relational records"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Talent opportunities and open calls"
+    },
+    "/opportunity_questions/{questionId}": {
+      "schema": "OpportunityQuestion",
+      "description": "Dynamic custom form questions"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Student applications"
+    },
+    "/application_responses/{responseId}": {
+      "schema": "ApplicationResponse",
+      "description": "Form question answers for applications"
+    },
+    "/application_status_history/{historyId}": {
+      "schema": "ApplicationStatusHistory",
+      "description": "Status transition logs"
+    },
+    "/admin_notes/{noteId}": {
+      "schema": "AdminNote",
+      "description": "Reviewer notes"
+    },
+    "/invitations/{invitationId}": {
+      "schema": "Invitation",
+      "description": "Direct student talent invitations"
+    },
+    "/participation_records/{participationId}": {
+      "schema": "ParticipationRecord",
+      "description": "Verified student activities history"
+    }
+  }
+}

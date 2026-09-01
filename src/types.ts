@@ -205,6 +205,7 @@ export interface Invitation {
   invited_by_name?: string;
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   notes?: string;
+  message?: string;
   created_at: string;
   student?: Student;
   opportunity?: Opportunity;
@@ -221,3 +222,180 @@ export interface ParticipationRecord {
   status: 'COMPLETED' | 'ONGOING';
   verified_at: string;
 }
+
+export interface MatchedSkillDetail {
+  skill_name: string;
+  student_level: SkillLevel;
+  required_level?: SkillLevel;
+  is_primary: boolean;
+  level_met: boolean;
+}
+
+export interface MatchResult {
+  score: number; // 0 - 100
+  tier: 'EXCELLENT' | 'STRONG' | 'MODERATE' | 'POTENTIAL' | 'NONE';
+  matched_skills: MatchedSkillDetail[];
+  reasons: string[];
+  matched_items: string[];
+  partial_items: string[];
+  missing_items: string[];
+}
+
+export interface NotificationItem {
+  notification_id: string;
+  recipient_type: 'STUDENT' | 'ADMIN';
+  recipient_id: string; // student_id, admin_id, or 'ALL_ADMINS'
+  title: string;
+  message: string;
+  type: 'APPLICATION_SUBMITTED' | 'STATUS_CHANGED' | 'INVITATION_RECEIVED' | 'INVITATION_RESPONDED' | 'SYSTEM';
+  related_entity_id?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface AuditLog {
+  log_id: string;
+  action: string;
+  entity_type: 'OPPORTUNITY' | 'APPLICATION' | 'STUDENT' | 'INVITATION' | 'PARTICIPATION' | 'AUTH' | 'DATA';
+  entity_id: string;
+  actor_id: string;
+  actor_name: string;
+  actor_role: string;
+  timestamp: string;
+  details: string;
+}
+
+export interface BackupMetadata {
+  backup_id: string;
+  filename: string;
+  timestamp: string;
+  created_by_id: string;
+  created_by_name: string;
+  file_size_bytes: number;
+  counts: {
+    students: number;
+    studentSkills: number;
+    opportunities: number;
+    applications: number;
+    invitations: number;
+    participationHistory: number;
+    categories: number;
+    skills: number;
+  };
+}
+
+export interface RestorePreview {
+  backup_id: string;
+  timestamp: string;
+  isValid: boolean;
+  currentCounts: Record<string, number>;
+  backupCounts: Record<string, number>;
+  warningMessage?: string;
+}
+
+export interface DuplicateItem {
+  id: string;
+  entity_type: 'STUDENT' | 'APPLICATION' | 'INVITATION' | 'PARTICIPATION';
+  duplicate_key: string;
+  reason: string;
+  count: number;
+  affected_records: any[];
+  recommended_action: string;
+}
+
+export interface DuplicateAuditResult {
+  scanned_at: string;
+  total_duplicates_found: number;
+  summary: {
+    students: number;
+    applications: number;
+    invitations: number;
+    participation: number;
+  };
+  duplicates: DuplicateItem[];
+}
+
+export interface CSVImportPreviewRow {
+  row_index: number;
+  raw_data: Record<string, string>;
+  normalized_data: any;
+  status: 'VALID' | 'DUPLICATE' | 'INVALID' | 'WARNING';
+  message: string;
+  duplicate_matched_id?: string;
+}
+
+export interface CSVImportPreview {
+  entity_type: string;
+  total_rows: number;
+  valid_count: number;
+  duplicate_count: number;
+  invalid_count: number;
+  warning_count: number;
+  rows: CSVImportPreviewRow[];
+}
+
+export interface CSVImportResult {
+  entity_type: string;
+  imported: number;
+  skipped: number;
+  duplicate: number;
+  invalid: number;
+  message: string;
+  timestamp: string;
+  errors: string[];
+}
+
+export interface TalentGapSkill {
+  skill_name: string;
+  category_name: string;
+  required_by_opportunities: string[];
+  available_students_count: number;
+  advanced_count: number;
+  intermediate_count: number;
+  beginner_count: number;
+  coverage_status: 'SUFFICIENT' | 'LOW' | 'MISSING';
+  recommendation: string;
+}
+
+export interface TalentGapAnalysis {
+  total_skills_evaluated: number;
+  sufficient_count: number;
+  low_count: number;
+  missing_count: number;
+  skill_gaps: TalentGapSkill[];
+  generated_at: string;
+}
+
+export interface OpportunityFunnelAnalytics {
+  opportunity_id: string;
+  title: string;
+  category_name?: string;
+  total_applications: number;
+  screening_count: number;
+  shortlisted_count: number;
+  selected_count: number;
+  confirmed_count: number;
+  participation_count: number;
+  conversion_rate_percent: number;
+  top_matched_talents: { student_name: string; score: number; student_id_number: string }[];
+  unmet_requirements: string[];
+}
+
+export type FeedbackType = 'BUG' | 'USABILITY' | 'DATA_ISSUE' | 'WORKFLOW_ISSUE' | 'CONTENT_ISSUE' | 'ENHANCEMENT';
+export type FeedbackRole = 'STUDENT' | 'ADMIN' | 'REVIEWER';
+
+export interface PilotFeedback {
+  feedback_id: string;
+  role: FeedbackRole;
+  user_identifier: string; // e.g. student_id_number, student full name, or admin email
+  user_name: string;
+  feedback_type: FeedbackType;
+  title: string;
+  description: string;
+  page_context?: string; // e.g. 'Peluang', 'Permohonan', 'Screening', 'Padanan', 'Keselamatan Data'
+  rating?: number; // 1 - 5 optional
+  status: 'NEW' | 'REVIEWED' | 'RESOLVED';
+  admin_response?: string;
+  created_at: string;
+}
+

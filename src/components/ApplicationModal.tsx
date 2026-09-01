@@ -304,7 +304,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[11px] font-semibold uppercase px-2 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-md">
-                Borang Permohonan SES 4.3
+                Borang Permohonan SES 4.4
               </span>
               <span className="text-xs text-slate-400">/{opportunity.slug}</span>
             </div>
@@ -374,7 +374,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
               <div className="bg-blue-950/40 border border-blue-800/40 rounded-xl p-4 flex items-start space-x-3">
                 <UserCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-blue-200 leading-relaxed">
-                  <span className="font-semibold text-blue-300">Prinsip SES 4.3 — Satu Pelajar, Satu Profil:</span> Masukkan ID Pelajar anda. Jika anda pernah memohon mana-mana peluang sebelum ini, maklumat asas anda akan dimuatkan secara automatik dan boleh diguna semula tanpa mengisi semula dari sifar.
+                  <span className="font-semibold text-blue-300">Prinsip SES 4.4 — Satu Pelajar, Satu Profil:</span> Masukkan ID Pelajar anda. Jika anda pernah memohon mana-mana peluang sebelum ini, maklumat asas anda akan dimuatkan secara automatik dan boleh diguna semula tanpa mengisi semula dari sifar.
                 </div>
               </div>
 
@@ -761,13 +761,13 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
             </div>
           )}
 
-          {/* STEP 3: REVIEW & SES 4.3 DATA INTEGRITY SUMMARY */}
+          {/* STEP 3: REVIEW & SES 4.4 DATA INTEGRITY SUMMARY */}
           {step === 3 && (
             <div className="space-y-6">
               <div className="bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-4 flex items-start space-x-3">
                 <ShieldAlert className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-emerald-200 leading-relaxed">
-                  <span className="font-semibold text-emerald-300">Pengesahan Integriti Data (SES 4.3):</span> Semua data telah dinormalisasi mengikut standard KPMBP (Format Huruf Besar, ID Berstruktur, dan Nombor Telefon Sah) sebelum disimpan ke dalam pangkalan data.
+                  <span className="font-semibold text-emerald-300">Pengesahan Integriti Data (SES 4.4):</span> Semua data telah dinormalisasi mengikut standard KPMBP (Format Huruf Besar, ID Berstruktur, dan Nombor Telefon Sah) sebelum disimpan ke dalam pangkalan data.
                 </div>
               </div>
 

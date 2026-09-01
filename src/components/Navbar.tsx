@@ -8,8 +8,10 @@ import {
   FileText, 
   CheckCircle2,
   SlidersHorizontal,
-  ExternalLink
+  ExternalLink,
+  MessageSquarePlus
 } from 'lucide-react';
+import { PilotFeedbackModal } from './PilotFeedbackModal.tsx';
 
 interface NavbarProps {
   currentView: 'student' | 'admin' | 'sandbox';
@@ -24,6 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [quickSlug, setQuickSlug] = useState('');
   const [showSlugInput, setShowSlugInput] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const handleSlugSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +56,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="font-bold text-base sm:text-lg tracking-tight text-white group-hover:text-blue-400 transition-colors">
                   KPMBP TALENT
                 </span>
-                <span className="text-[10px] font-semibold uppercase px-2 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full">
-                  SES 4.3
+                <span className="text-[10px] font-semibold uppercase px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full">
+                  SES 4.4
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-medium hidden sm:block">
@@ -145,20 +148,41 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setCurrentView('sandbox')}
                 className={`hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   currentView === 'sandbox'
-                    ? 'bg-amber-600 text-white'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                 }`}
-                title="SES 4.3 Data Normalization & Validation Tester"
+                title="SES 4.4 Data Normalization, Matching & Storage Tester"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>SES 4.3 Sandbox</span>
+                <span>SES 4.4 Sandbox</span>
               </button>
             </nav>
+
+            {/* Global Pilot Feedback Trigger Button */}
+            <button
+              type="button"
+              id="navbar-btn-pilot-feedback"
+              onClick={() => setIsFeedbackOpen(true)}
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold transition-all shadow-sm"
+              title="Hantar Maklum Balas Pengalaman Pilot"
+            >
+              <MessageSquarePlus className="w-4 h-4 text-amber-400" />
+              <span className="hidden xl:inline">Maklum Balas Pilot</span>
+            </button>
 
           </div>
 
         </div>
       </div>
+
+      <PilotFeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        defaultRole={currentView === 'admin' ? 'ADMIN' : 'STUDENT'}
+        userIdentifier={currentView === 'admin' ? 'ADMIN_SESSION' : 'STUDENT_SESSION'}
+        userName={currentView === 'admin' ? 'Pentadbir/Penilai KPMBP' : 'Pengguna KPMBP'}
+        pageContext={`Navbar Bar (${currentView.toUpperCase()})`}
+      />
     </header>
   );
 };

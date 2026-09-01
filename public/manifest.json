@@ -1,0 +1,50 @@
+{
+  "name": "KPMBP Student Talent & Opportunity Platform",
+  "short_name": "KPMBP Talent",
+  "description": "Internal platform for KPMBP administration to discover, invite, screen, and select student talents for opportunities, activities, and representation.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "lang": "ms-MY",
+  "categories": ["education", "productivity", "management"],
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Peluang Terbuka",
+      "short_name": "Peluang",
+      "description": "Lihat senarai panggilan terbuka bakat",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Log masuk portal pengurusan & saringan",
+      "url": "/admin",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Legacy Band 2026",
+      "short_name": "Legacy Band",
+      "description": "Uji bakat Legacy Band 2026",
+      "url": "/legacy-band-2026",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

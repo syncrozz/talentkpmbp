@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="goldGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="blueGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad192)" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Diamond Cap Top -->
+  <polygon points="96,44 150,70 96,96 42,70" fill="url(#blueGrad192)"/>
+  <polygon points="96,50 142,72 96,90 50,72" fill="#1e3a8a" opacity="0.6"/>
+
+  <!-- Cap Base -->
+  <path d="M58,80 L58,106 C58,126 134,126 134,106 L134,80 L96,96 Z" fill="url(#blueGrad192)"/>
+
+  <!-- Tassel -->
+  <path d="M50,72 Q40,95 44,115" fill="none" stroke="url(#goldGrad192)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="44" cy="117" r="4" fill="url(#goldGrad192)"/>
+
+  <!-- Gold Star -->
+  <g transform="translate(96, 142)">
+    <path d="M0,-16 Q0,-4 14,0 Q0,4 0,16 Q0,4 -14,0 Q0,-4 0,-16 Z" fill="url(#goldGrad192)"/>
+    <circle cx="0" cy="0" r="3" fill="#fff"/>
+  </g>
+</svg>

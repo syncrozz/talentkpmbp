@@ -23,7 +23,19 @@ import {
   UserPlus, 
   Check, 
   X,
-  Trophy
+  Trophy,
+  Database,
+  Cloud,
+  RefreshCw,
+  Server,
+  ShieldAlert,
+  LogIn,
+  LogOut,
+  Key,
+  UserCheck,
+  Shield,
+  Award,
+  HelpCircle
 } from 'lucide-react';
 import { 
   Opportunity, 
@@ -35,12 +47,33 @@ import {
   OpportunityStatus, 
   SkillLevel, 
   QuestionType,
-  Invitation
+  Invitation,
+  AdminRole,
+  AdminUser
 } from '../types.ts';
 import { generateSlug, validateSlug } from '../lib/normalization.ts';
+import { getFirebaseStatus, syncDataToFirestore, FirebaseStatusInfo } from '../lib/firebaseSync.ts';
+import { AdminLogin } from './admin/AdminLogin.tsx';
+import { AdminSmartMatching } from './admin/AdminSmartMatching.tsx';
+import { AdminAuditTrail } from './admin/AdminAuditTrail.tsx';
+import { AdminDataSafety } from './admin/AdminDataSafety.tsx';
+import { AdminTalentIntelligence } from './admin/AdminTalentIntelligence.tsx';
+import { AdminPilotFeedback } from './admin/AdminPilotFeedback.tsx';
+import { AdminTalentProfileModal } from './admin/AdminTalentProfileModal.tsx';
+import { calculateOpportunityMatch } from '../lib/matching.ts';
 
 export const AdminPortal: React.FC = () => {
-  const [subView, setSubView] = useState<'dashboard' | 'opportunities' | 'applications' | 'talentSearch' | 'students'>('dashboard');
+  // Authentication & RBAC State
+  const [authToken, setAuthToken] = useState<string | null>(() => sessionStorage.getItem('kpmbp_admin_token'));
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
+    const saved = sessionStorage.getItem('kpmbp_admin_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { return null; }
+    }
+    return null;
+  });
+
+  const [subView, setSubView] = useState<'dashboard' | 'opportunities' | 'applications' | 'matching' | 'talentSearch' | 'students' | 'talentIntelligence' | 'dataSafety' | 'audit' | 'firebase' | 'pilotFeedback'>('dashboard');
 
   // State collections
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -51,7 +84,14 @@ export const AdminPortal: React.FC = () => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
 
+  // Firebase Cloud State
+  const [firebaseStatus, setFirebaseStatus] = useState<FirebaseStatusInfo | null>(null);
+  const [firebaseSyncing, setFirebaseSyncing] = useState<boolean>(false);
+  const [firebaseSyncResult, setFirebaseSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const [loading, setLoading] = useState<boolean>(true);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   // Filters for Applications
   const [selectedOppFilter, setSelectedOppFilter] = useState<string>('all');
@@ -99,17 +139,62 @@ export const AdminPortal: React.FC = () => {
   const [selectedStudentProfile, setSelectedStudentProfile] = useState<Student | null>(null);
   const [studentHistoryRecords, setStudentHistoryRecords] = useState<any[]>([]);
 
+  // Confirmation Delete Modals
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'OPPORTUNITY' | 'APPLICATION' | 'STUDENT';
+    id: string;
+    name: string;
+  } | null>(null);
+
+  // RBAC Helper flags
+  const isSuperAdmin = adminUser?.role === AdminRole.SUPER_ADMIN;
+  const isAdminOrSuper = adminUser?.role === AdminRole.SUPER_ADMIN || adminUser?.role === AdminRole.ADMIN;
+  const isReviewer = adminUser?.role === AdminRole.REVIEWER;
+
+  // Helper: Authenticated Fetch
+  const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      ...(options.headers || {}),
+      'Content-Type': 'application/json',
+      ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+    };
+    return fetch(url, { ...options, headers });
+  };
+
+  // Verify current auth session with backend on mount
+  useEffect(() => {
+    if (authToken) {
+      authenticatedFetch('/api/admin/me')
+        .then(res => {
+          if (!res.ok) {
+            handleLogout();
+          } else {
+            return res.json();
+          }
+        })
+        .then(userData => {
+          if (userData) {
+            setAdminUser(userData);
+            sessionStorage.setItem('kpmbp_admin_user', JSON.stringify(userData));
+          }
+        })
+        .catch(() => {
+          handleLogout();
+        });
+    }
+  }, [authToken]);
+
   const loadData = async () => {
     try {
       setLoading(true);
       const [oppRes, appRes, catRes, skRes, anaRes, stuRes, invRes] = await Promise.all([
-        fetch('/api/opportunities?admin=true'),
-        fetch('/api/applications'),
-        fetch('/api/categories'),
-        fetch('/api/skills'),
-        fetch('/api/analytics'),
-        fetch('/api/students/search'),
-        fetch('/api/invitations'),
+        authenticatedFetch('/api/opportunities?admin=true'),
+        authenticatedFetch('/api/applications'),
+        authenticatedFetch('/api/categories'),
+        authenticatedFetch('/api/skills'),
+        authenticatedFetch('/api/analytics'),
+        authenticatedFetch('/api/students/search'),
+        authenticatedFetch('/api/invitations'),
       ]);
 
       const [oppData, appData, catData, skData, anaData, stuData, invData] = await Promise.all([
@@ -122,14 +207,17 @@ export const AdminPortal: React.FC = () => {
         invRes.json(),
       ]);
 
-      setOpportunities(oppData);
-      setApplications(appData);
-      setCategories(catData);
-      setSkills(skData);
-      setAnalytics(anaData);
-      setStudents(stuData);
-      setSearchResults(stuData);
-      setInvitations(invData);
+      setOpportunities(Array.isArray(oppData) ? oppData : []);
+      setApplications(Array.isArray(appData) ? appData : []);
+      setCategories(Array.isArray(catData) ? catData : []);
+      setSkills(Array.isArray(skData) ? skData : []);
+      setAnalytics(anaData || null);
+      setStudents(Array.isArray(stuData) ? stuData : []);
+      setSearchResults(Array.isArray(stuData) ? stuData : []);
+      setInvitations(Array.isArray(invData) ? invData : []);
+
+      // Load Firebase Status
+      fetchFirebaseStatus();
     } catch (err) {
       console.error('Error loading admin data:', err);
     } finally {
@@ -137,9 +225,79 @@ export const AdminPortal: React.FC = () => {
     }
   };
 
+  const fetchFirebaseStatus = async () => {
+    try {
+      const status = await getFirebaseStatus();
+      setFirebaseStatus(status);
+    } catch (e) {
+      console.warn('Firebase status check:', e);
+    }
+  };
+
+  const handleTriggerFirebaseSync = async () => {
+    try {
+      setFirebaseSyncing(true);
+      setFirebaseSyncResult(null);
+
+      const result = await syncDataToFirestore({
+        categories,
+        skills,
+        students,
+        opportunities,
+        applications,
+      });
+
+      if (result.success) {
+        setFirebaseSyncResult({
+          success: true,
+          message: `Berjaya menyelaras ${result.syncedCount} rekod ke Firestore Cloud (Project: ${firebaseStatus?.projectId || 'KPMBP'})!`,
+        });
+        await fetchFirebaseStatus();
+      } else {
+        setFirebaseSyncResult({
+          success: false,
+          message: `Ralat penyelarasan: ${result.error}`,
+        });
+      }
+    } catch (err: any) {
+      setFirebaseSyncResult({
+        success: false,
+        message: err?.message || 'Ralat sambungan ke Firestore.',
+      });
+    } finally {
+      setFirebaseSyncing(false);
+    }
+  };
+
   useEffect(() => {
-    loadData();
-  }, []);
+    if (authToken) {
+      loadData();
+    }
+  }, [authToken]);
+
+  const handleLoginSuccess = (token: string, user: AdminUser) => {
+    setAuthToken(token);
+    setAdminUser(user);
+    setSubView('dashboard');
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (authToken) {
+        await fetch('/api/admin/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+        });
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setAuthToken(null);
+      setAdminUser(null);
+      sessionStorage.removeItem('kpmbp_admin_token');
+      sessionStorage.removeItem('kpmbp_admin_user');
+    }
+  };
 
   // Sync slug on title change when creating new
   const handleTitleChange = (val: string) => {
@@ -150,6 +308,11 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleOpenCreateOppModal = () => {
+    if (!isAdminOrSuper) {
+      setActionError('Peranan anda tidak mempunyai kebenaran untuk membina peluang.');
+      setTimeout(() => setActionError(null), 3000);
+      return;
+    }
     setEditingOpp(null);
     setOppTitle('');
     setOppSlug('');
@@ -168,13 +331,17 @@ export const AdminPortal: React.FC = () => {
   };
 
   const handleOpenEditOppModal = (opp: Opportunity) => {
+    if (!isAdminOrSuper) {
+      setActionError('Peranan anda tidak mempunyai kebenaran untuk mengemaskini peluang.');
+      setTimeout(() => setActionError(null), 3000);
+      return;
+    }
     setEditingOpp(opp);
     setOppTitle(opp.title);
     setOppSlug(opp.slug);
     setOppCategory(opp.category_id);
     setOppDescription(opp.description);
     setOppRoles(opp.open_call_roles?.join(', ') || '');
-    // format datetime-local
     const dt = new Date(opp.closing_date);
     const localIso = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     setOppClosingDate(localIso);
@@ -229,9 +396,8 @@ export const AdminPortal: React.FC = () => {
       const url = editingOpp ? `/api/opportunities/${editingOpp.opportunity_id}` : '/api/opportunities';
       const method = editingOpp ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authenticatedFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -243,6 +409,8 @@ export const AdminPortal: React.FC = () => {
 
       setShowOppModal(false);
       loadData();
+      setActionSuccess(editingOpp ? 'Peluang berjaya dikemaskini.' : 'Peluang baharu berjaya diterbitkan.');
+      setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
       setOppModalError('Ralat sambungan pelayan.');
     }
@@ -257,9 +425,9 @@ export const AdminPortal: React.FC = () => {
       if (searchSkill) queryParams.append('skill', searchSkill);
       if (searchLevel) queryParams.append('level', searchLevel);
 
-      const res = await fetch(`/api/students/search?${queryParams.toString()}`);
+      const res = await authenticatedFetch(`/api/students/search?${queryParams.toString()}`);
       const data = await res.json();
-      setSearchResults(data);
+      setSearchResults(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Search error:', err);
     }
@@ -269,24 +437,28 @@ export const AdminPortal: React.FC = () => {
   const handleUpdateStatus = async () => {
     if (!activeApp) return;
     try {
-      const res = await fetch(`/api/applications/${activeApp.application_id}/status`, {
+      const res = await authenticatedFetch(`/api/applications/${activeApp.application_id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           new_status: statusUpdateVal,
           remarks: statusRemarks.trim(),
-          reviewer_name: 'Admin Hal Ehwal Pelajar KPMBP',
+          reviewer_name: adminUser?.name || 'Admin Pentadbiran KPMBP',
         }),
       });
 
       if (res.ok) {
         setStatusRemarks('');
         loadData();
-        // Refresh active app
-        const updatedRes = await fetch('/api/applications');
+        const updatedRes = await authenticatedFetch('/api/applications');
         const updatedList: Application[] = await updatedRes.json();
         const found = updatedList.find(a => a.application_id === activeApp.application_id);
         if (found) setActiveApp(found);
+        setActionSuccess('Status permohonan berjaya dikemaskini.');
+        setTimeout(() => setActionSuccess(null), 3000);
+      } else {
+        const errData = await res.json();
+        setActionError(errData.error || 'Gagal mengemaskini status permohonan.');
+        setTimeout(() => setActionError(null), 3000);
       }
     } catch (err) {
       console.error('Status update error:', err);
@@ -297,23 +469,27 @@ export const AdminPortal: React.FC = () => {
   const handleAddNote = async () => {
     if (!activeApp || !newAdminNote.trim()) return;
     try {
-      const res = await fetch(`/api/applications/${activeApp.application_id}/notes`, {
+      const res = await authenticatedFetch(`/api/applications/${activeApp.application_id}/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           note: newAdminNote.trim(),
-          admin_name: 'Admin Penilai KPMBP',
+          admin_name: adminUser?.name || 'Panel Penilai KPMBP',
         }),
       });
 
       if (res.ok) {
         setNewAdminNote('');
         loadData();
-        // Refresh active app
-        const updatedRes = await fetch('/api/applications');
+        const updatedRes = await authenticatedFetch('/api/applications');
         const updatedList: Application[] = await updatedRes.json();
         const found = updatedList.find(a => a.application_id === activeApp.application_id);
         if (found) setActiveApp(found);
+        setActionSuccess('Nota penilaian berjaya ditambah.');
+        setTimeout(() => setActionSuccess(null), 3000);
+      } else {
+        const errData = await res.json();
+        setActionError(errData.error || 'Gagal menambah nota.');
+        setTimeout(() => setActionError(null), 3000);
       }
     } catch (err) {
       console.error('Add note error:', err);
@@ -325,15 +501,20 @@ export const AdminPortal: React.FC = () => {
     e.preventDefault();
     if (!inviteStudent || !inviteOppId) return;
 
+    if (!isAdminOrSuper) {
+      setActionError('Peranan anda tidak mempunyai kebenaran untuk menghantar jemputan.');
+      setTimeout(() => setActionError(null), 3000);
+      return;
+    }
+
     try {
-      const res = await fetch('/api/invitations', {
+      const res = await authenticatedFetch('/api/invitations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: inviteStudent.student_id,
           opportunity_id: inviteOppId,
           notes: inviteNotes.trim(),
-          admin_name: 'Unit Pembangunan Bakat KPMBP',
+          admin_name: adminUser?.name || 'Unit Pembangunan Bakat KPMBP',
         }),
       });
 
@@ -346,6 +527,9 @@ export const AdminPortal: React.FC = () => {
           setInviteNotes('');
         }, 1800);
         loadData();
+      } else {
+        setActionError(data.error || 'Gagal menghantar jemputan.');
+        setTimeout(() => setActionError(null), 3000);
       }
     } catch (err) {
       console.error('Invite error:', err);
@@ -356,11 +540,42 @@ export const AdminPortal: React.FC = () => {
   const handleViewStudentProfile = async (stu: Student) => {
     setSelectedStudentProfile(stu);
     try {
-      const res = await fetch(`/api/students/${stu.student_id}/history`);
+      const res = await authenticatedFetch(`/api/students/${stu.student_id}/history`);
       const data = await res.json();
-      setStudentHistoryRecords(data);
+      setStudentHistoryRecords(Array.isArray(data) ? data : []);
     } catch (e) {
       setStudentHistoryRecords([]);
+    }
+  };
+
+  // Execute Confirmed Delete (Super Admin only)
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation) return;
+    try {
+      let endpoint = '';
+      if (deleteConfirmation.type === 'OPPORTUNITY') endpoint = `/api/opportunities/${deleteConfirmation.id}`;
+      if (deleteConfirmation.type === 'APPLICATION') endpoint = `/api/applications/${deleteConfirmation.id}`;
+      if (deleteConfirmation.type === 'STUDENT') endpoint = `/api/students/${deleteConfirmation.id}`;
+
+      const res = await authenticatedFetch(endpoint, { method: 'DELETE' });
+      if (res.ok) {
+        if (deleteConfirmation.type === 'APPLICATION' && activeApp?.application_id === deleteConfirmation.id) {
+          setActiveApp(null);
+        }
+        setActionSuccess(`Rekod ${deleteConfirmation.name} telah dipadam secara kekal.`);
+        setTimeout(() => setActionSuccess(null), 3000);
+        setDeleteConfirmation(null);
+        loadData();
+      } else {
+        const err = await res.json();
+        setActionError(err.error || 'Gagal memadam rekod.');
+        setTimeout(() => setActionError(null), 3000);
+        setDeleteConfirmation(null);
+      }
+    } catch (err) {
+      setActionError('Ralat sambungan pelayan semasa operasi pemadaman.');
+      setTimeout(() => setActionError(null), 3000);
+      setDeleteConfirmation(null);
     }
   };
 
@@ -369,6 +584,11 @@ export const AdminPortal: React.FC = () => {
     const matchStatus = selectedStatusFilter === 'all' || app.status === selectedStatusFilter;
     return matchOpp && matchStatus;
   });
+
+  // If user is not authenticated, render AdminLogin component
+  if (!authToken || !adminUser) {
+    return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 pb-16">
@@ -389,59 +609,185 @@ export const AdminPortal: React.FC = () => {
               </h1>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="flex flex-wrap items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 gap-1">
+            {/* Authenticated Admin Badge & Logout */}
+            <div className="flex items-center space-x-3 bg-slate-950 p-2 rounded-xl border border-slate-800 self-start md:self-auto">
+              <div className="space-y-0.5">
+                <div className="flex items-center space-x-1.5">
+                  <span className={`w-2 h-2 rounded-full ${
+                    isSuperAdmin ? 'bg-purple-400' : isReviewer ? 'bg-emerald-400' : 'bg-blue-400'
+                  }`}></span>
+                  <span className="text-xs font-bold text-white truncate max-w-[180px]">{adminUser.name}</span>
+                </div>
+                <div className="flex items-center space-x-1 text-[10px]">
+                  <span className={`px-1.5 py-0.2 rounded font-bold uppercase ${
+                    isSuperAdmin ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                    isReviewer ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                    'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                  }`}>
+                    {adminUser.role}
+                  </span>
+                  <span className="text-slate-500 truncate max-w-[140px]">{adminUser.department}</span>
+                </div>
+              </div>
+
               <button
                 type="button"
-                id="admin-subtab-dashboard"
-                onClick={() => setSubView('dashboard')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subView === 'dashboard' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
+                id="btn-admin-logout"
+                onClick={handleLogout}
+                className="p-2 hover:bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg transition-colors"
+                title="Log Keluar Pentadbir"
               >
-                Ringkasan
-              </button>
-              <button
-                type="button"
-                id="admin-subtab-opportunities"
-                onClick={() => setSubView('opportunities')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subView === 'opportunities' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Peluang ({opportunities.length})
-              </button>
-              <button
-                type="button"
-                id="admin-subtab-applications"
-                onClick={() => setSubView('applications')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subView === 'applications' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Permohonan &amp; Saringan ({applications.length})
-              </button>
-              <button
-                type="button"
-                id="admin-subtab-talent-search"
-                onClick={() => setSubView('talentSearch')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subView === 'talentSearch' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Carian Bakat
-              </button>
-              <button
-                type="button"
-                id="admin-subtab-students"
-                onClick={() => setSubView('students')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subView === 'students' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Direktori Pelajar ({students.length})
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
+          </div>
+
+          {/* Alert Banners */}
+          {actionError && (
+            <div className="mt-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{actionError}</span>
+            </div>
+          )}
+          {actionSuccess && (
+            <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{actionSuccess}</span>
+            </div>
+          )}
+
+          {/* Navigation Subtabs */}
+          <div className="mt-6 flex flex-wrap items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 gap-1">
+            <button
+              type="button"
+              id="admin-subtab-dashboard"
+              onClick={() => setSubView('dashboard')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                subView === 'dashboard' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Ringkasan
+            </button>
+            <button
+              type="button"
+              id="admin-subtab-opportunities"
+              onClick={() => setSubView('opportunities')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                subView === 'opportunities' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Peluang ({opportunities.length})
+            </button>
+            <button
+              type="button"
+              id="admin-subtab-applications"
+              onClick={() => setSubView('applications')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                subView === 'applications' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Permohonan &amp; Saringan ({applications.length})
+            </button>
+            <button
+              type="button"
+              id="admin-subtab-matching"
+              onClick={() => setSubView('matching')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                subView === 'matching' ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30' : 'text-purple-300 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Padanan Pintar</span>
+            </button>
+            <button
+              type="button"
+              id="admin-subtab-talent-search"
+              onClick={() => setSubView('talentSearch')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                subView === 'talentSearch' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Carian Bakat
+            </button>
+            <button
+              type="button"
+              id="admin-subtab-students"
+              onClick={() => setSubView('students')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                subView === 'students' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Direktori Pelajar ({students.length})
+            </button>
+
+            {/* Talent Intelligence & Gap Analysis Tab */}
+            <button
+              type="button"
+              id="admin-subtab-talent-intelligence"
+              onClick={() => setSubView('talentIntelligence')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                subView === 'talentIntelligence' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-indigo-300 hover:text-white'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Kecerdasan Bakat</span>
+            </button>
+
+            {/* Data Safety Centre Tab (SES 4.4 Engine - Super Admin & Admin only) */}
+            {isAdminOrSuper && (
+              <button
+                type="button"
+                id="admin-subtab-data-safety"
+                onClick={() => setSubView('dataSafety')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                  subView === 'dataSafety' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-emerald-300 hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Keselamatan Data</span>
+              </button>
+            )}
+
+            {/* Audit Trail tab (Super Admin & Admin only) */}
+            {isAdminOrSuper && (
+              <button
+                type="button"
+                id="admin-subtab-audit"
+                onClick={() => setSubView('audit')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                  subView === 'audit' ? 'bg-blue-600 text-white' : 'text-blue-300 hover:text-white'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Jejak Audit</span>
+              </button>
+            )}
+
+            {/* Pilot Feedback Centre Tab */}
+            <button
+              type="button"
+              id="admin-subtab-pilot-feedback"
+              onClick={() => setSubView('pilotFeedback')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                subView === 'pilotFeedback' ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' : 'text-amber-300 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Maklum Balas Pilot</span>
+            </button>
+
+            <button
+              type="button"
+              id="admin-subtab-firebase"
+              onClick={() => setSubView('firebase')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                subView === 'firebase' ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-500/10'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Cloud Firestore</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+            </button>
           </div>
         </div>
       </div>
@@ -487,47 +833,46 @@ export const AdminPortal: React.FC = () => {
               {/* Left 2 Cols: Pilot Showcase & Quick Actions */}
               <div className="lg:col-span-2 space-y-6">
                 
-                {/* Pilot Use Case Card */}
-                <div className="bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-800/40 rounded-2xl p-6 shadow-xl space-y-4">
+                {/* Pilot Opportunity Highlight */}
+                <div className="bg-gradient-to-r from-blue-950/60 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 shadow-xl space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-semibold">
-                      PILOT USE CASE #001
+                    <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-semibold uppercase tracking-wider flex items-center space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Program Perintis Utama SES 4.4</span>
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">/legacy-band-2026</span>
+                    <span className="text-xs text-emerald-400 font-mono">STATUS: OPEN</span>
                   </div>
+
                   <div>
-                    <h3 className="text-xl font-bold text-white tracking-tight">
-                      Legacy Band 2026 Open Audition
-                    </h3>
+                    <h2 className="text-xl font-bold text-white">Legacy Band 2026 (Kugiran Rasmi Kolej)</h2>
                     <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                      Pilot pertama platform bagi mengumpulkan pemain Gitar, Bass, Vokal, Keyboard dan Drum. Sistem membolehkan penapisan video, pertukaran status, dan jemputan bakat secara langsung.
+                      Panggilan terbuka rasmi bagi uji bakat pemuzik berbakat KPMBP untuk formasi kumpulan muzik kolej. Terbuka kepada semua semester DIA, DBS, DIT, DCIS, dan DCS.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button
                       type="button"
-                      id="btn-quick-filter-legacy"
                       onClick={() => {
-                        setSelectedOppFilter('opp-001');
-                        setSubView('applications');
+                        const legacyOpp = opportunities.find(o => o.slug === 'legacy-band-2026');
+                        if (legacyOpp) {
+                          setSelectedOppFilter(legacyOpp.opportunity_id);
+                          setSubView('applications');
+                        }
                       }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all flex items-center space-x-1.5"
                     >
-                      <FileText className="w-4 h-4" />
-                      <span>Lihat Pemohon Legacy Band</span>
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Semak Calon Pemohon ({applications.filter(a => a.opportunity?.slug === 'legacy-band-2026').length})</span>
                     </button>
+
                     <button
                       type="button"
-                      id="btn-quick-search-bass"
-                      onClick={() => {
-                        setSearchSkill('Bass');
-                        setSubView('talentSearch');
-                        handlePerformTalentSearch();
-                      }}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center space-x-1.5"
+                      onClick={() => setSubView('matching')}
+                      className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5"
                     >
-                      <Search className="w-4 h-4 text-amber-400" />
-                      <span>Cari Pemain Bass</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Jana Padanan Pintar</span>
                     </button>
                   </div>
                 </div>
@@ -619,15 +964,22 @@ export const AdminPortal: React.FC = () => {
                 <h2 className="text-xl font-bold text-white tracking-tight">Pengurusan Peluang &amp; Panggilan Terbuka</h2>
                 <p className="text-xs text-slate-400">Bina panggilan terbuka baharu, urus soalan khusus, dan tetapkan tarikh tutup.</p>
               </div>
-              <button
-                type="button"
-                id="btn-create-opportunity-trigger"
-                onClick={handleOpenCreateOppModal}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-md shadow-indigo-600/30 transition-all self-start sm:self-auto"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Bina Peluang Baharu</span>
-              </button>
+              
+              {isAdminOrSuper ? (
+                <button
+                  type="button"
+                  id="btn-create-opportunity-trigger"
+                  onClick={handleOpenCreateOppModal}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-md shadow-indigo-600/30 transition-all self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Bina Peluang Baharu</span>
+                </button>
+              ) : (
+                <div className="text-xs text-slate-500 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
+                  Peranan Reviewer: Mod Lihat Sahaja
+                </div>
+              )}
             </div>
 
             {/* Opportunities List */}
@@ -666,14 +1018,16 @@ export const AdminPortal: React.FC = () => {
                   </div>
 
                   <div className="pt-3 border-t border-slate-800 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditOppModal(opp)}
-                      className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Kemaskini</span>
-                    </button>
+                    {isAdminOrSuper && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditOppModal(opp)}
+                        className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Kemaskini</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -685,6 +1039,20 @@ export const AdminPortal: React.FC = () => {
                       <FileText className="w-3.5 h-3.5" />
                       <span>Lihat Pemohon</span>
                     </button>
+                    {isSuperAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmation({
+                          type: 'OPPORTUNITY',
+                          id: opp.opportunity_id,
+                          name: opp.title,
+                        })}
+                        className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs transition-colors"
+                        title="Hapus Peluang (Super Admin Sahaja)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -789,7 +1157,7 @@ export const AdminPortal: React.FC = () => {
                           <td className="py-3.5 px-4 text-slate-400 font-mono">
                             {new Date(app.submitted_at).toLocaleDateString('ms-MY')}
                           </td>
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-3.5 px-4 text-right flex items-center justify-end space-x-2">
                             <button
                               type="button"
                               id={`btn-screen-app-${app.application_id}`}
@@ -801,6 +1169,20 @@ export const AdminPortal: React.FC = () => {
                             >
                               Saring / Audit
                             </button>
+                            {isSuperAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setDeleteConfirmation({
+                                  type: 'APPLICATION',
+                                  id: app.application_id,
+                                  name: `${app.student?.full_name} - ${app.opportunity?.title}`,
+                                })}
+                                className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs transition-colors"
+                                title="Hapus Permohonan (Super Admin Sahaja)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -814,7 +1196,26 @@ export const AdminPortal: React.FC = () => {
         )}
 
         {/* -------------------------------------------------------------
-            SUBVIEW 4: TALENT SEARCH & DIRECT INVITATION ("SEARCH -> MATCH -> INVITE")
+            SUBVIEW 4: SMART MATCHING ENGINE ("PADANAN PINTAR")
+           ------------------------------------------------------------- */}
+        {subView === 'matching' && (
+          <AdminSmartMatching
+            opportunities={opportunities}
+            students={students}
+            applications={applications}
+            invitations={invitations}
+            canInvite={isAdminOrSuper}
+            onViewProfile={(student) => handleViewStudentProfile(student)}
+            onDirectInvite={(student, oppId) => {
+              setInviteStudent(student);
+              setInviteOppId(oppId);
+              setInviteNotes('');
+            }}
+          />
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 5: TALENT SEARCH & DIRECT INVITATION ("SEARCH -> MATCH -> INVITE")
            ------------------------------------------------------------- */}
         {subView === 'talentSearch' && (
           <div className="space-y-6">
@@ -853,9 +1254,9 @@ export const AdminPortal: React.FC = () => {
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                   >
                     <option value="">Semua Tahap</option>
-                    <option value={SkillLevel.ADVANCED}>Advanced (Lanjutan)</option>
-                    <option value={SkillLevel.INTERMEDIATE}>Intermediate (Pertengahan)</option>
-                    <option value={SkillLevel.BEGINNER}>Beginner (Asas)</option>
+                    <option value={SkillLevel.BEGINNER}>Beginner</option>
+                    <option value={SkillLevel.INTERMEDIATE}>Intermediate</option>
+                    <option value={SkillLevel.ADVANCED}>Advanced</option>
                   </select>
                 </div>
 
@@ -865,18 +1266,18 @@ export const AdminPortal: React.FC = () => {
                     id="btn-execute-talent-search"
                     className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-amber-600/30 transition-all flex items-center justify-center space-x-1.5"
                   >
-                    <Search className="w-4 h-4" />
-                    <span>Cari Bakat</span>
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Laksana Carian</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* Talent Search Results Grid */}
+            {/* Search Results */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {searchResults.length === 0 ? (
                 <div className="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 text-xs">
-                  Tiada profil bakat dijumpai bagi kriteria carian ini.
+                  Tiada profil pelajar ditemui dengan kriteria carian tersebut.
                 </div>
               ) : (
                 searchResults.map((stu) => (
@@ -888,34 +1289,30 @@ export const AdminPortal: React.FC = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-base font-bold text-white">{stu.full_name}</h3>
-                          <p className="text-xs text-blue-400 font-mono mt-0.5">{stu.student_id_number} • {stu.class}</p>
+                          <span className="text-xs text-blue-400 font-mono">{stu.student_id_number}</span>
                         </div>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                          {stu.gender}
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                          {stu.programme} (Sem {stu.semester})
                         </span>
                       </div>
 
-                      <div className="text-xs text-slate-400">
-                        <span>{stu.programme} (Sem {stu.semester})</span>
-                      </div>
-
-                      {/* Skills */}
-                      <div className="space-y-1.5 pt-2 border-t border-slate-800">
-                        <span className="text-[10px] font-semibold uppercase text-slate-400 block">Portfolio Bakat:</span>
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Portfolio Bakat:</span>
                         <div className="flex flex-wrap gap-1.5">
-                          {stu.skills?.map((sk, i) => (
+                          {stu.skills?.map((sk, idx) => (
                             <span
-                              key={i}
-                              className={`text-[11px] px-2 py-0.5 rounded-md border font-medium ${
-                                sk.is_primary
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                  : 'bg-slate-800 text-slate-300 border-slate-700'
-                              }`}
+                              key={idx}
+                              className="text-[11px] px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md font-medium"
                             >
-                              {sk.skill_name} <strong className="text-xs">({sk.skill_level})</strong>
+                              {sk.skill_name} <span className="text-[10px] text-amber-400 font-bold">({sk.skill_level})</span>
                             </span>
                           ))}
                         </div>
+                      </div>
+
+                      <div className="text-xs text-slate-400 space-y-0.5 pt-2 border-t border-slate-800/80">
+                        <div>WhatsApp: <strong className="text-slate-200 font-mono">{stu.phone}</strong></div>
+                        <div>E-mel: <strong className="text-slate-200 lowercase">{stu.email}</strong></div>
                       </div>
                     </div>
 
@@ -923,19 +1320,27 @@ export const AdminPortal: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleViewStudentProfile(stu)}
-                        className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors"
+                        className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1"
                       >
-                        Profil Master
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Profil Master</span>
                       </button>
-                      <button
-                        type="button"
-                        id={`btn-invite-student-${stu.student_id}`}
-                        onClick={() => setInviteStudent(stu)}
-                        className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1"
-                      >
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>Jemput</span>
-                      </button>
+
+                      {isAdminOrSuper && (
+                        <button
+                          type="button"
+                          id={`btn-invite-student-${stu.student_id}`}
+                          onClick={() => {
+                            setInviteStudent(stu);
+                            setInviteOppId(opportunities[0]?.opportunity_id || '');
+                            setInviteNotes('');
+                          }}
+                          className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-amber-600/30 transition-all flex items-center justify-center space-x-1"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Jemput</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -946,86 +1351,242 @@ export const AdminPortal: React.FC = () => {
         )}
 
         {/* -------------------------------------------------------------
-            SUBVIEW 5: STUDENTS DIRECTORY & PARTICIPATION
+            SUBVIEW 6: STUDENT DIRECTORY ("ONE STUDENT, ONE MASTER PROFILE")
            ------------------------------------------------------------- */}
         {subView === 'students' && (
           <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center space-x-2">
-                <Users className="w-5 h-5 text-indigo-400" />
-                <span>Direktori Master Pelajar KPMBP</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Pangkalan profil pelajar bersepadu dengan sejarah penglibatan aktiviti, kemahiran pelbagai, dan maklumat perhubungan rasmi.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-white tracking-tight">Direktori Master Profil Pelajar KPMBP</h2>
+                <p className="text-xs text-slate-400">Prinsip SES 4.4: Satu Pelajar, Satu Master Profil. Rekod ini dikongsi merentasi semua permohonan.</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {students.map((stu) => (
-                <div
-                  key={stu.student_id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-base font-bold text-white">{stu.full_name}</h3>
-                      <p className="text-xs text-blue-400 font-mono mt-0.5">{stu.student_id_number} • {stu.class}</p>
-                    </div>
-
-                    <div className="text-xs text-slate-400 space-y-1">
-                      <div>Program: <span className="text-slate-300">{stu.programme}</span></div>
-                      <div>Telefon: <span className="font-mono text-slate-300">{stu.phone}</span></div>
-                      <div>E-mel: <span className="text-slate-300 lowercase">{stu.email}</span></div>
-                    </div>
-
-                    {/* Skills */}
-                    <div className="pt-2 border-t border-slate-800 space-y-1">
-                      <span className="text-[10px] font-semibold uppercase text-slate-400 block">Bakat Didaftarkan:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {stu.skills?.map((sk, idx) => (
-                          <span key={idx} className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                            {sk.skill_name} ({sk.skill_level})
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => handleViewStudentProfile(stu)}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-colors"
-                    >
-                      Lihat Sejarah &amp; Profil Penuh
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                    <tr>
+                      <th className="py-3.5 px-4">Nama Pelajar</th>
+                      <th className="py-3.5 px-4">ID Pelajar</th>
+                      <th className="py-3.5 px-4">Program &amp; Kelas</th>
+                      <th className="py-3.5 px-4">Portfolio Bakat</th>
+                      <th className="py-3.5 px-4">Hubungan</th>
+                      <th className="py-3.5 px-4 text-right">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {students.map((stu) => (
+                      <tr key={stu.student_id} className="hover:bg-slate-850/50 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-white">
+                          {stu.full_name}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-blue-400">
+                          {stu.student_id_number}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {stu.programme} (Sem {stu.semester}) • {stu.class}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {stu.skills?.map((sk, idx) => (
+                              <span key={idx} className="px-2 py-0.5 bg-slate-800 text-slate-200 rounded text-[10px] border border-slate-700">
+                                {sk.skill_name} ({sk.skill_level})
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">
+                          {stu.phone}
+                        </td>
+                        <td className="py-3.5 px-4 text-right flex items-center justify-end space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewStudentProfile(stu)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold"
+                          >
+                            Lihat Profil
+                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmation({
+                                type: 'STUDENT',
+                                id: stu.student_id,
+                                name: `${stu.full_name} (${stu.student_id_number})`,
+                              })}
+                              className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs transition-colors"
+                              title="Hapus Pelajar (Super Admin Sahaja)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
           </div>
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 7: AUDIT TRAIL (Super Admin & Admin Only)
+           ------------------------------------------------------------- */}
+        {subView === 'audit' && isAdminOrSuper && (
+          <AdminAuditTrail authToken={authToken} />
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 8: CLOUD FIRESTORE INTEGRATION
+           ------------------------------------------------------------- */}
+        {subView === 'firebase' && (
+          <div className="space-y-6 max-w-4xl">
+            
+            {/* Header Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-2xl">
+                  <Database className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
+                    <span>Google Cloud Firestore Data Layer</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-mono">
+                      ONLINE &amp; PROVISIONED
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Penyelarasan persistent cloud storage berasaskan standard SES 4.4 untuk data production.
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Firebase Project ID</span>
+                  <p className="text-xs font-mono font-bold text-amber-400 truncate">
+                    {firebaseStatus?.projectId || 'ai-studio-talentkpmbp-8e265986'}
+                  </p>
+                </div>
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Cloud Region</span>
+                  <p className="text-xs font-mono font-bold text-white">
+                    {firebaseStatus?.region || 'asia-southeast1'}
+                  </p>
+                </div>
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Status Penyambungan</span>
+                  <p className="text-xs font-bold text-emerald-400 flex items-center space-x-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Aktif &amp; Boleh Capai</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Sync Trigger Action */}
+              <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Manual Data Synchronization</h4>
+                  <p className="text-[11px] text-slate-400">Muat naik &amp; selaraskan rekod pelajar, peluang, permohonan ke Firestore.</p>
+                </div>
+
+                <button
+                  type="button"
+                  id="btn-trigger-firestore-sync"
+                  onClick={handleTriggerFirebaseSync}
+                  disabled={firebaseSyncing}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center space-x-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${firebaseSyncing ? 'animate-spin' : ''}`} />
+                  <span>{firebaseSyncing ? 'Menyelaras ke Cloud...' : 'Selaraskan ke Cloud Firestore'}</span>
+                </button>
+              </div>
+
+              {firebaseSyncResult && (
+                <div className={`p-4 rounded-xl text-xs flex items-start space-x-2 ${
+                  firebaseSyncResult.success ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+                }`}>
+                  {firebaseSyncResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+                  <span>{firebaseSyncResult.message}</span>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 9: TALENT INTELLIGENCE & GAP ANALYSIS
+           ------------------------------------------------------------- */}
+        {subView === 'talentIntelligence' && (
+          <AdminTalentIntelligence
+            authToken={authToken}
+            adminUser={adminUser}
+            opportunities={opportunities}
+            onSelectStudent={(stuId) => {
+              const stu = students.find(s => s.student_id === stuId || s.student_id_number === stuId);
+              if (stu) handleViewStudentProfile(stu);
+            }}
+          />
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 10: DATA SAFETY CENTRE (SES 4.4 ENGINE)
+           ------------------------------------------------------------- */}
+        {subView === 'dataSafety' && isAdminOrSuper && (
+          <AdminDataSafety
+            authToken={authToken}
+            adminUser={adminUser}
+            onDataChanged={() => loadData()}
+          />
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 11: PILOT FEEDBACK CENTRE (SES 4.4 OBSERVABILITY)
+           ------------------------------------------------------------- */}
+        {subView === 'pilotFeedback' && (
+          <AdminPilotFeedback
+            authToken={authToken}
+            adminUser={adminUser}
+          />
         )}
 
       </div>
 
       {/* -------------------------------------------------------------
-          MODAL 1: APPLICATION SCREENING & WORKFLOW DRAWER
+          MODAL 1: SCREENING & AUDIT DRAWER (APPLICATION DETAILS)
          ------------------------------------------------------------- */}
-      {activeApp && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      {activeApp && (() => {
+        const matchResult = (activeApp.opportunity && activeApp.student)
+          ? calculateOpportunityMatch(activeApp.opportunity, activeApp.student)
+          : null;
+
+        return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
             
             {/* Header */}
-            <div className="bg-slate-950 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono text-indigo-400 block">Audit &amp; Saringan: {activeApp.application_id}</span>
-                <h2 className="text-lg font-bold text-white mt-0.5">
-                  {activeApp.student?.full_name} — {activeApp.opportunity?.title}
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">{activeApp.application_id}</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                    STATUS: {activeApp.status}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white tracking-tight mt-1">
+                  Saringan Permohonan: {activeApp.student?.full_name}
                 </h2>
+                <p className="text-xs text-slate-400">
+                  Peluang: <span className="text-slate-200 font-semibold">{activeApp.opportunity?.title}</span> ({activeApp.opportunity?.category_name})
+                </p>
               </div>
               <button
                 type="button"
-                id="btn-close-screening-modal"
                 onClick={() => setActiveApp(null)}
                 className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors"
               >
@@ -1033,98 +1594,240 @@ export const AdminPortal: React.FC = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-200 text-xs">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
               
-              {/* Student Master Profile & Skills Card */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                  1. Profil Master Pelajar
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <span className="text-slate-500 block">ID Pelajar:</span>
-                    <span className="font-mono text-white font-semibold">{activeApp.student?.student_id_number}</span>
+              {/* 1. STUDENT & TALENT PILLAR */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1.1 Student Identity */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                    <UserCheck className="w-4 h-4 text-blue-400" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">1. Maklumat Pelajar</h3>
                   </div>
-                  <div>
-                    <span className="text-slate-500 block">Program &amp; Sem:</span>
-                    <span className="text-white">{activeApp.student?.programme} (Sem {activeApp.student?.semester})</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Kelas:</span>
-                    <span className="font-mono text-white">{activeApp.student?.class}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">WhatsApp:</span>
-                    <span className="font-mono text-white">{activeApp.student?.phone}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Nama Penuh:</span>
+                      <span className="font-bold text-white text-xs">{activeApp.student?.full_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">ID Pelajar (Matrix):</span>
+                      <span className="font-mono text-blue-400 font-bold">{activeApp.student?.student_id_number}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Program &amp; Semester:</span>
+                      <span className="text-slate-300">{activeApp.student?.programme} (Sem {activeApp.student?.semester})</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Kelas / Jantina:</span>
+                      <span className="text-slate-300">{activeApp.student?.class} • {activeApp.student?.gender}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">No. WhatsApp / Tel:</span>
+                      <span className="font-mono text-slate-200">{activeApp.student?.phone}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Emel Pelajar:</span>
+                      <span className="font-mono text-slate-300 truncate block">{activeApp.student?.email}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-900">
-                  <span className="text-slate-500 block mb-1">Portfolio Bakat Pelajar:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {activeApp.student?.skills?.map((sk, i) => (
-                      <span key={i} className="text-[11px] bg-slate-800 text-slate-200 px-2.5 py-0.5 rounded border border-slate-700">
-                        {sk.skill_name} <strong className="text-amber-400">({sk.skill_level})</strong> {sk.experience_duration && `• ${sk.experience_duration}`}
-                      </span>
-                    ))}
+                {/* 1.2 Talent Portfolio */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">2. Portfolio Kemahiran Bakat</h3>
+                  </div>
+                  <div className="space-y-1.5">
+                    {activeApp.student?.skills && activeApp.student.skills.length > 0 ? (
+                      activeApp.student.skills.map((sk, skIdx) => (
+                        <div key={skIdx} className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
+                          <div>
+                            <div className="flex items-center space-x-1.5">
+                              <span className="font-bold text-white">{sk.skill_name}</span>
+                              {sk.is_primary && (
+                                <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-[9px] font-bold">
+                                  UTAMA
+                                </span>
+                              )}
+                            </div>
+                            {sk.experience_duration && (
+                              <span className="text-[10px] text-slate-400 block mt-0.5">{sk.experience_duration}</span>
+                            )}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            sk.skill_level === SkillLevel.ADVANCED ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                            sk.skill_level === SkillLevel.INTERMEDIATE ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                            'bg-slate-800 text-slate-400'
+                          }`}>
+                            {sk.skill_level}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-500 text-xs">Tiada rekod kemahiran berdaftar.</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Application Responses (Opportunity-specific questions) */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                  2. Respons Soalan Khusus Bagi Peluang Ini
-                </h3>
+              {/* 2. MATCHING & FIT EXPLAINABILITY (SES 4.4 DETERMINISTIC ENGINE) */}
+              {matchResult && (
+                <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-purple-200">
+                        3. Enjin Padanan Pintar &amp; Analisis Kelayakan (SES 4.4 Engine)
+                      </h3>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-base font-extrabold font-mono text-purple-300">{matchResult.score}%</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        matchResult.tier === 'EXCELLENT' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                        matchResult.tier === 'STRONG' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                        matchResult.tier === 'MODERATE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                        'bg-slate-800 text-slate-400'
+                      }`}>
+                        {matchResult.tier} TIER
+                      </span>
+                    </div>
+                  </div>
 
+                  {/* Matched, Partial, Missing Badges */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                      <span className="text-[10px] font-bold text-emerald-400 flex items-center space-x-1 uppercase">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Syarat Dipenuhi ({matchResult.matched_items?.length || 0}):</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {matchResult.matched_items && matchResult.matched_items.length > 0 ? (
+                          matchResult.matched_items.map((item, mIdx) => (
+                            <span key={mIdx} className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded text-[10px]">
+                              ✓ {item}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-slate-500">Tiada padanan terus</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                      <span className="text-[10px] font-bold text-amber-400 flex items-center space-x-1 uppercase">
+                        <AlertCircle className="w-3 h-3 text-amber-400" />
+                        <span>Padanan Separa ({matchResult.partial_items?.length || 0}):</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {matchResult.partial_items && matchResult.partial_items.length > 0 ? (
+                          matchResult.partial_items.map((item, pIdx) => (
+                            <span key={pIdx} className="px-1.5 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded text-[10px]">
+                              △ {item}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-slate-500">Tiada padanan separa</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                      <span className="text-[10px] font-bold text-rose-400 flex items-center space-x-1 uppercase">
+                        <span className="w-3 h-3 text-rose-400 font-bold inline-flex items-center justify-center">✕</span>
+                        <span>Syarat Belum Dipenuhi ({matchResult.missing_items?.length || 0}):</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {matchResult.missing_items && matchResult.missing_items.length > 0 ? (
+                          matchResult.missing_items.map((item, xIdx) => (
+                            <span key={xIdx} className="px-1.5 py-0.5 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded text-[10px]">
+                              ✕ {item}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-emerald-400 font-medium">Semua syarat dipenuhi</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Justification Reasons */}
+                  <div className="pt-1 text-[11px] text-slate-300">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Justifikasi Skor:</span>
+                    <ul className="space-y-1">
+                      {matchResult.reasons.map((r, rIdx) => (
+                        <li key={rIdx} className="flex items-start space-x-1.5">
+                          <span className="text-purple-400 font-bold">•</span>
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. OPPORTUNITY REQUIREMENTS & SUBMITTED RESPONSES */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                  <FileText className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    4. Jawapan Borang Permohonan Pelajar
+                  </h3>
+                </div>
+                
                 {activeApp.responses && activeApp.responses.length > 0 ? (
                   <div className="space-y-3">
-                    {activeApp.responses.map((resp, idx) => {
-                      const isUrl = typeof resp.response_value === 'string' && (resp.response_value.startsWith('http://') || resp.response_value.startsWith('https://'));
+                    {activeApp.responses.map((resp, rIdx) => {
+                      const qObj = activeApp.opportunity?.questions?.find(q => q.question_id === resp.question_id);
                       return (
-                        <div key={idx} className="border-b border-slate-900 pb-2.5">
-                          <span className="text-slate-400 font-medium block">{resp.question_text}</span>
-                          {isUrl ? (
+                        <div key={rIdx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                          <label className="text-[11px] font-semibold text-slate-400 block">
+                            {qObj?.question_text || `Soalan #${rIdx + 1}`}
+                          </label>
+                          
+                          {/* Check if video URL */}
+                          {resp.response_value && (resp.response_value.startsWith('http://') || resp.response_value.startsWith('https://')) ? (
                             <a
-                              href={resp.response_value as string}
+                              href={resp.response_value}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-blue-400 hover:underline flex items-center space-x-1 mt-1 font-mono break-all"
+                              className="text-blue-400 hover:underline flex items-center space-x-1 font-mono break-all mt-1"
                             >
-                              <Video className="w-3.5 h-3.5 shrink-0" />
-                              <span>{resp.response_value as string}</span>
-                              <ExternalLink className="w-3 h-3 shrink-0" />
+                              <Video className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                              <span>{resp.response_value}</span>
+                              <ExternalLink className="w-3 h-3 ml-1 shrink-0" />
                             </a>
                           ) : (
-                            <span className="text-white font-medium mt-1 block">
-                              {resp.response_value === true ? 'Ya (Disahkan)' : resp.response_value === false ? 'Tidak' : String(resp.response_value)}
-                            </span>
+                            <p className="text-white font-medium text-xs leading-relaxed">
+                              {resp.response_value || 'Tiada jawapan'}
+                            </p>
                           )}
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-slate-500">Tiada soalan tambahan.</p>
+                  <p className="text-slate-500 text-xs">Tiada soalan khusus / jawapan tambahan bagi peluang ini.</p>
                 )}
               </div>
 
-              {/* Status Workflow Transition Controller */}
-              <div className="bg-slate-950 border border-indigo-900/50 rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center space-x-1.5">
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                  <span>3. Kemas Kini Status Saringan &amp; Aliran Kerja</span>
-                </h3>
+              {/* 4. STATUS UPDATE CONTROL & WORKFLOW PROGRESSION */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-indigo-500/30 space-y-3">
+                <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    5. Tindakan Saringan &amp; Aliran Status (Action Workflow)
+                  </h3>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-slate-400 font-semibold block mb-1">Status Baharu</label>
+                    <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Status Saringan Baharu</label>
                     <select
-                      id="select-app-status-transition"
+                      id="select-update-app-status"
                       value={statusUpdateVal}
                       onChange={(e) => setStatusUpdateVal(e.target.value as ApplicationStatus)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-semibold focus:outline-none"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
                     >
                       {Object.values(ApplicationStatus).map(st => (
                         <option key={st} value={st}>{st}</option>
@@ -1132,88 +1835,97 @@ export const AdminPortal: React.FC = () => {
                     </select>
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="text-[10px] text-slate-400 font-semibold block mb-1">Catatan / Sebab Pertukaran</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="input-status-remarks"
-                        value={statusRemarks}
-                        onChange={(e) => setStatusRemarks(e.target.value)}
-                        placeholder="Contoh: Lulus saringan video, dipanggil ke audisi fizikal..."
-                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        id="btn-confirm-status-update"
-                        onClick={handleUpdateStatus}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shrink-0"
-                      >
-                        Kemas Kini Status
-                      </button>
-                    </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Catatan Status (Audit Trail &amp; Pemakluman Pelajar)</label>
+                    <input
+                      type="text"
+                      id="input-update-app-remarks"
+                      value={statusRemarks}
+                      onChange={(e) => setStatusRemarks(e.target.value)}
+                      placeholder="Contoh: Lulus saringan video, dijemput sesi audisi bilik 2..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
                 </div>
-              </div>
 
-              {/* Admin Assessment Notes Thread */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-                  <MessageSquare className="w-4 h-4 text-slate-400" />
-                  <span>4. Nota Penilaian Sulit Panel Admin</span>
-                </h3>
-
-                <div className="space-y-2">
-                  {activeApp.notes_list && activeApp.notes_list.length > 0 ? (
-                    activeApp.notes_list.map((n, idx) => (
-                      <div key={idx} className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-1">
-                        <div className="flex justify-between items-center text-[10px] text-slate-500">
-                          <span className="font-semibold text-slate-400">{n.admin_name}</span>
-                          <span>{new Date(n.created_at).toLocaleString('ms-MY')}</span>
-                        </div>
-                        <p className="text-slate-200 text-xs">{n.note}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-500 text-xs">Belum ada nota penilaian.</p>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <input
-                    type="text"
-                    id="input-admin-note"
-                    value={newAdminNote}
-                    onChange={(e) => setNewAdminNote(e.target.value)}
-                    placeholder="Tambah catatan panel penilai..."
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none"
-                  />
+                <div className="flex justify-end pt-1">
                   <button
                     type="button"
-                    id="btn-save-admin-note"
-                    onClick={handleAddNote}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-xs"
+                    id="btn-confirm-status-update"
+                    onClick={handleUpdateStatus}
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 transition-all flex items-center space-x-1.5"
                   >
-                    Tambah Nota
+                    <Check className="w-4 h-4" />
+                    <span>Simpan &amp; Sahkan Status Saringan</span>
                   </button>
                 </div>
               </div>
 
-              {/* Audit Trail Status History */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-                  <History className="w-4 h-4 text-slate-400" />
-                  <span>5. Jejak Audit Status (Status History)</span>
-                </h3>
+              {/* 5. PRIVATE ADMIN / PANEL NOTES */}
+              <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    6. Catatan Panel Penilai (Sulit / Dalaman Pentadbir Sahaja)
+                  </h3>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="input-new-admin-note"
+                    value={newAdminNote}
+                    onChange={(e) => setNewAdminNote(e.target.value)}
+                    placeholder="Tambah catatan panel penilai (cth: Perlu uji lagu tempo tinggi)..."
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    id="btn-add-admin-note"
+                    onClick={handleAddNote}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold"
+                  >
+                    Tambah Nota
+                  </button>
+                </div>
 
                 <div className="space-y-2 pt-1">
-                  {activeApp.status_history?.map((h, i) => (
-                    <div key={i} className="flex items-start space-x-2 text-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                  {activeApp.notes_list && activeApp.notes_list.length > 0 ? (
+                    activeApp.notes_list.map((note) => (
+                      <div key={note.note_id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-between items-start">
+                        <div>
+                          <p className="text-slate-200 text-xs">{note.note}</p>
+                          <span className="text-[10px] text-slate-500 block mt-1 font-mono">
+                            {note.admin_name} • {new Date(note.created_at).toLocaleString('ms-MY')}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-500 text-xs">Tiada nota penilaian direkodkan.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* 6. STATUS AUDIT TRAIL LOG */}
+              <div className="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div className="flex items-center space-x-2 border-b border-slate-850 pb-2">
+                  <History className="w-4 h-4 text-blue-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    Jejak Sejarah Audit Status
+                  </h3>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  {activeApp.status_history?.map((hist) => (
+                    <div key={hist.history_id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
                       <div>
-                        <span className="font-bold text-white">{h.new_status}</span>
-                        {h.remarks && <span className="text-slate-300"> — {h.remarks}</span>}
-                        <span className="text-[10px] text-slate-500 block">Oleh {h.changed_by} pada {new Date(h.changed_at).toLocaleString('ms-MY')}</span>
+                        <span className="font-semibold text-indigo-400">{hist.new_status}</span>
+                        {hist.remarks && <p className="text-slate-300 text-[11px] mt-0.5">{hist.remarks}</p>}
+                      </div>
+                      <div className="text-right font-mono text-[10px] text-slate-500">
+                        <span>{hist.changed_by}</span>
+                        <span className="block">{new Date(hist.changed_at).toLocaleDateString('ms-MY')}</span>
                       </div>
                     </div>
                   ))}
@@ -1222,12 +1934,29 @@ export const AdminPortal: React.FC = () => {
 
             </div>
 
-            {/* Footer */}
-            <div className="bg-slate-950 border-t border-slate-800 px-6 py-3 flex justify-end">
+            <div className="bg-slate-900 border-t border-slate-800 p-4 flex justify-between items-center">
+              <div>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmation({
+                        type: 'APPLICATION',
+                        id: activeApp.application_id,
+                        name: `${activeApp.student?.full_name} - ${activeApp.opportunity?.title}`,
+                      });
+                    }}
+                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center space-x-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Permohonan (Super Admin)</span>
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setActiveApp(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold"
               >
                 Tutup
               </button>
@@ -1235,71 +1964,64 @@ export const AdminPortal: React.FC = () => {
 
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* -------------------------------------------------------------
           MODAL 2: CREATE / EDIT OPPORTUNITY
          ------------------------------------------------------------- */}
       {showOppModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            
-            <div className="bg-slate-950 border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                {editingOpp ? 'Kemaskini Peluang' : 'Bina Peluang / Panggilan Terbuka Baharu'}
-              </h2>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl p-6 space-y-5">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">
+                {editingOpp ? 'Kemaskini Panggilan Terbuka' : 'Bina Panggilan Terbuka Baharu'}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowOppModal(false)}
-                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveOpportunity} className="p-6 overflow-y-auto space-y-5 flex-1 text-slate-200 text-xs">
-              
-              {oppModalError && (
-                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-xl flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{oppModalError}</span>
-                </div>
-              )}
+            {oppModalError && (
+              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 p-3 rounded-xl text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{oppModalError}</span>
+              </div>
+            )}
 
-              {/* Title & Slug */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Tajuk Peluang <span className="text-rose-400">*</span></label>
-                  <input
-                    type="text"
-                    id="input-opp-title"
-                    value={oppTitle}
-                    onChange={(e) => handleTitleChange(e.target.value)}
-                    placeholder="Contoh: LEGACY BAND 2026"
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+            <form onSubmit={handleSaveOpportunity} className="space-y-4 text-xs">
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Tajuk Peluang</label>
+                <input
+                  type="text"
+                  id="input-opp-title"
+                  value={oppTitle}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="Contoh: Legacy Band 2026 Uji Bakat"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                  required
+                />
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Slug Unik (URL Entry Point) <span className="text-rose-400">*</span></label>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Slug URL</label>
                   <input
                     type="text"
                     id="input-opp-slug"
                     value={oppSlug}
-                    onChange={(e) => setOppSlug(generateSlug(e.target.value))}
+                    onChange={(e) => setOppSlug(e.target.value)}
                     placeholder="legacy-band-2026"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-indigo-300 font-mono focus:outline-none"
                     required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <span className="text-[10px] text-slate-400 block mt-1">URL awam: /{oppSlug || 'slug'}</span>
                 </div>
-              </div>
-
-              {/* Category & Status */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Kategori</label>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Kategori</label>
                   <select
                     id="select-opp-category"
                     value={oppCategory}
@@ -1311,80 +2033,52 @@ export const AdminPortal: React.FC = () => {
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Status</label>
-                  <select
-                    id="select-opp-status"
-                    value={oppStatus}
-                    onChange={(e) => setOppStatus(e.target.value as OpportunityStatus)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
-                  >
-                    {Object.values(OpportunityStatus).map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Tarikh &amp; Masa Tutup</label>
-                  <input
-                    type="datetime-local"
-                    id="input-opp-closing-date"
-                    value={oppClosingDate}
-                    onChange={(e) => setOppClosingDate(e.target.value)}
-                    required
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
-                  />
-                </div>
               </div>
 
-              {/* Open Call Roles & Max Applicants */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Peranan Panggilan Terbuka (Dipisahkan dengan koma)</label>
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Penerangan &amp; Syarat</label>
+                <textarea
+                  id="input-opp-desc"
+                  value={oppDescription}
+                  onChange={(e) => setOppDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Terangkan syarat kelayakan, objektif, dan jadual uji bakat..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Peranan Dicari (Pisahkan koma)</label>
                   <input
                     type="text"
                     id="input-opp-roles"
                     value={oppRoles}
                     onChange={(e) => setOppRoles(e.target.value)}
-                    placeholder="Guitar, Bass, Vocal, Keyboard, Drum"
+                    placeholder="Guitar, Bass, Vocal, Drum, Emcee"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
                   />
                 </div>
-
                 <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Kapasiti Maksimum Pemohon</label>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Tarikh &amp; Masa Tutup</label>
                   <input
-                    type="number"
-                    id="input-opp-max-applicants"
-                    value={oppMaxApplicants}
-                    onChange={(e) => setOppMaxApplicants(e.target.value)}
-                    placeholder="Cth: 50 (Kosongkan jika tanpa had)"
+                    type="datetime-local"
+                    id="input-opp-closing-date"
+                    value={oppClosingDate}
+                    onChange={(e) => setOppClosingDate(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                    required
                   />
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Penerangan &amp; Skop Peluang</label>
-                <textarea
-                  rows={3}
-                  id="textarea-opp-description"
-                  value={oppDescription}
-                  onChange={(e) => setOppDescription(e.target.value)}
-                  placeholder="Terangkan tujuan panggilan terbuka dan maklumat latihan..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
-                />
-              </div>
-
-              {/* Dynamic Questions Builder */}
+              {/* Dynamic Questions Builder (SES 4.4 Standard) */}
               <div className="border-t border-slate-800 pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-xs font-bold uppercase text-slate-300">Soalan Khusus Borang Permohonan</label>
-                    <p className="text-[10px] text-slate-400">Borang akan menjana soalan dinamik ini mengikut format SES 4.3.</p>
+                    <p className="text-[10px] text-slate-400">Borang akan menjana soalan dinamik ini mengikut format SES 4.4.</p>
                   </div>
                   <button
                     type="button"
@@ -1401,76 +2095,59 @@ export const AdminPortal: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {oppQuestions.map((q, qIdx) => (
-                    <div key={qIdx} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                        <div className="sm:col-span-7">
-                          <input
-                            type="text"
-                            value={q.question_text}
-                            onChange={(e) => {
-                              const updated = [...oppQuestions];
-                              updated[qIdx].question_text = e.target.value;
-                              setOppQuestions(updated);
-                            }}
-                            placeholder={`Teks Soalan #${qIdx + 1}`}
-                            required
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-xs"
-                          />
-                        </div>
-                        <div className="sm:col-span-3">
-                          <select
-                            value={q.question_type}
-                            onChange={(e) => {
-                              const updated = [...oppQuestions];
-                              updated[qIdx].question_type = e.target.value as QuestionType;
-                              setOppQuestions(updated);
-                            }}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-xs"
-                          >
-                            <option value={QuestionType.TEXT}>Teks Pendek</option>
-                            <option value={QuestionType.TEXTAREA}>Teks Panjang</option>
-                            <option value={QuestionType.SINGLE_SELECT}>Pilihan Tunggal (Radio)</option>
-                            <option value={QuestionType.MULTI_SELECT}>Pilihan Pelbagai (Checkbox)</option>
-                            <option value={QuestionType.VIDEO_LINK}>Pautan Video Uji Bakat</option>
-                            <option value={QuestionType.BOOLEAN}>Pengesahan (Setuju)</option>
-                          </select>
-                        </div>
-                        <div className="sm:col-span-2 flex items-center justify-between">
-                          <label className="flex items-center space-x-1 text-[10px] text-slate-300">
-                            <input
-                              type="checkbox"
-                              checked={q.is_required}
-                              onChange={(e) => {
-                                const updated = [...oppQuestions];
-                                updated[qIdx].is_required = e.target.checked;
-                                setOppQuestions(updated);
-                              }}
-                            />
-                            <span>Wajib</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setOppQuestions(oppQuestions.filter((_, i) => i !== qIdx))}
-                            className="text-slate-500 hover:text-rose-400 p-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                  {oppQuestions.map((q, idx) => (
+                    <div key={idx} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <input
+                          type="text"
+                          value={q.question_text}
+                          onChange={(e) => {
+                            const copy = [...oppQuestions];
+                            copy[idx].question_text = e.target.value;
+                            setOppQuestions(copy);
+                          }}
+                          placeholder={`Soalan #${idx + 1}...`}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                          required
+                        />
+                        <select
+                          value={q.question_type}
+                          onChange={(e) => {
+                            const copy = [...oppQuestions];
+                            copy[idx].question_type = e.target.value as QuestionType;
+                            setOppQuestions(copy);
+                          }}
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
+                        >
+                          <option value={QuestionType.TEXT}>Teks Pendek</option>
+                          <option value={QuestionType.TEXTAREA}>Teks Panjang</option>
+                          <option value={QuestionType.SINGLE_SELECT}>Pilihan Tunggal</option>
+                          <option value={QuestionType.VIDEO_LINK}>Pautan Video / Audisi</option>
+                          <option value={QuestionType.URL}>Pautan URL</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOppQuestions(oppQuestions.filter((_, i) => i !== idx));
+                          }}
+                          className="text-slate-500 hover:text-rose-400 p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
 
-                      {(q.question_type === QuestionType.SINGLE_SELECT || q.question_type === QuestionType.MULTI_SELECT) && (
+                      {q.question_type === QuestionType.SINGLE_SELECT && (
                         <input
                           type="text"
                           value={q.options_str}
                           onChange={(e) => {
-                            const updated = [...oppQuestions];
-                            updated[qIdx].options_str = e.target.value;
-                            setOppQuestions(updated);
+                            const copy = [...oppQuestions];
+                            copy[idx].options_str = e.target.value;
+                            setOppQuestions(copy);
                           }}
-                          placeholder="Pilihan jawapan (dipisahkan dengan koma, cth: Lead Guitar, Bass, Vocal)"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-white text-xs"
+                          placeholder="Pilihan jawapan dipisah koma (cth: Guitar, Bass, Drum, Vocal)"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-[11px] text-slate-300"
                         />
                       )}
                     </div>
@@ -1478,7 +2155,7 @@ export const AdminPortal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-950 border-t border-slate-800 -mx-6 -mb-6 p-4 flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowOppModal(false)}
@@ -1488,32 +2165,28 @@ export const AdminPortal: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  id="btn-save-opp-submit"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30"
+                  id="btn-save-opportunity-submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/30"
                 >
-                  Simpan Peluang
+                  {editingOpp ? 'Simpan Perubahan' : 'Terbitkan Peluang'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>
       )}
 
       {/* -------------------------------------------------------------
-          MODAL 3: DIRECT TALENT INVITATION ("INVITE TO OPPORTUNITY")
+          MODAL 3: DIRECT INVITATION MODAL ("INVITE CANDIDATE")
          ------------------------------------------------------------- */}
       {inviteStudent && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-[10px] font-semibold uppercase text-amber-400 block">Jemputan Terus Pentadbir</span>
-                <h3 className="text-base font-bold text-white mt-0.5">
-                  Jemput {inviteStudent.full_name}
-                </h3>
-                <p className="text-xs text-slate-400 font-mono">{inviteStudent.student_id_number} • {inviteStudent.programme}</p>
-              </div>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Send className="w-4 h-4 text-amber-400" />
+                <span>Hantar Jemputan Terus Ke Peluang</span>
+              </h3>
               <button
                 type="button"
                 onClick={() => setInviteStudent(null)}
@@ -1525,32 +2198,39 @@ export const AdminPortal: React.FC = () => {
 
             {inviteSuccessMsg ? (
               <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 p-4 rounded-xl text-xs flex items-center space-x-2">
-                <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4" />
                 <span>{inviteSuccessMsg}</span>
               </div>
             ) : (
               <form onSubmit={handleSendInvite} className="space-y-4 text-xs">
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Calon Pelajar</span>
+                  <p className="font-bold text-white text-sm">{inviteStudent.full_name}</p>
+                  <p className="text-slate-400 font-mono">{inviteStudent.student_id_number} • {inviteStudent.programme} (Sem {inviteStudent.semester})</p>
+                </div>
+
                 <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Pilih Peluang Yang Ingin Dijemput</label>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Pilih Peluang</label>
                   <select
                     id="select-invite-opportunity"
                     value={inviteOppId}
                     onChange={(e) => setInviteOppId(e.target.value)}
-                    required
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                    required
                   >
-                    <option value="">-- Pilih Peluang --</option>
-                    {opportunities.filter(o => o.status === OpportunityStatus.OPEN).map(o => (
-                      <option key={o.opportunity_id} value={o.opportunity_id}>{o.title}</option>
+                    {opportunities.map(opp => (
+                      <option key={opp.opportunity_id} value={opp.opportunity_id}>
+                        {opp.title} ({opp.status})
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Nota Jemputan Khusus</label>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Mesej / Catatan Jemputan</label>
                   <textarea
+                    id="input-invite-notes"
                     rows={3}
-                    id="textarea-invite-notes"
                     value={inviteNotes}
                     onChange={(e) => setInviteNotes(e.target.value)}
                     placeholder="Contoh: Berdasarkan kemahiran Bass lanjutan anda, kami menjemput anda menyertai audisi formasi Legacy Band 2026..."
@@ -1582,95 +2262,57 @@ export const AdminPortal: React.FC = () => {
       )}
 
       {/* -------------------------------------------------------------
-          MODAL 4: STUDENT MASTER PROFILE & PARTICIPATION HISTORY
+          MODAL 4: STUDENT MASTER PROFILE & PARTICIPATION HISTORY (SES 4.4)
          ------------------------------------------------------------- */}
       {selectedStudentProfile && (
+        <AdminTalentProfileModal
+          studentId={selectedStudentProfile.student_id}
+          authToken={authToken}
+          opportunities={opportunities}
+          onClose={() => setSelectedStudentProfile(null)}
+          onSendInvite={(stu, oppId) => {
+            setInviteStudent(stu);
+            setInviteOppId(oppId);
+            setSelectedStudentProfile(null);
+          }}
+        />
+      )}
+
+      {/* -------------------------------------------------------------
+          MODAL 5: DELETE CONFIRMATION DIALOG (SUPER ADMIN ONLY)
+         ------------------------------------------------------------- */}
+      {deleteConfirmation && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl p-6 space-y-5">
-            <div className="flex justify-between items-start border-b border-slate-800 pb-3">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="flex items-center space-x-3 text-rose-400">
+              <div className="p-2.5 bg-rose-500/20 rounded-xl border border-rose-500/30">
+                <Trash2 className="w-5 h-5" />
+              </div>
               <div>
-                <span className="text-[10px] font-mono text-indigo-400 block">{selectedStudentProfile.student_id_number}</span>
-                <h3 className="text-lg font-bold text-white mt-0.5">
-                  {selectedStudentProfile.full_name}
-                </h3>
-                <p className="text-xs text-slate-400">{selectedStudentProfile.programme} (Sem {selectedStudentProfile.semester}) • {selectedStudentProfile.class}</p>
+                <h3 className="text-base font-bold text-white">Sahkan Pemadaman Kekal</h3>
+                <span className="text-[10px] text-rose-300 font-mono uppercase">SES 4.4 Atomic Deletion</span>
               </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Adakah anda pasti ingin memadamkan <strong className="text-white">{deleteConfirmation.name}</strong>? Tindakan ini adalah kekal dan tidak boleh dikembalikan.
+            </p>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
-                onClick={() => setSelectedStudentProfile(null)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setDeleteConfirmation(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
               >
-                <X className="w-5 h-5" />
+                Batal
               </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              
-              {/* Contact Info */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 grid grid-cols-2 gap-3">
-                <div>
-                  <span className="text-slate-500 block">WhatsApp:</span>
-                  <span className="font-mono text-white">{selectedStudentProfile.phone}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">E-mel:</span>
-                  <span className="text-white lowercase">{selectedStudentProfile.email}</span>
-                </div>
-              </div>
-
-              {/* Multi-Talent Portfolio */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Portfolio Kemahiran Pelajar:</span>
-                <div className="space-y-1.5">
-                  {selectedStudentProfile.skills?.map((sk, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-slate-900 p-2 rounded-lg border border-slate-800">
-                      <div>
-                        <span className="font-semibold text-white">{sk.skill_name}</span>
-                        {sk.experience_duration && <span className="text-slate-400 text-[11px]"> • {sk.experience_duration}</span>}
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
-                        {sk.skill_level}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Verified College Participation History */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center space-x-1.5">
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Rekod Penglibatan Kolej Yang Disahkan:</span>
-                </span>
-                
-                {studentHistoryRecords.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {studentHistoryRecords.map((hist, hIdx) => (
-                      <div key={hIdx} className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center">
-                        <div>
-                          <span className="font-semibold text-white">{hist.opportunity_title}</span>
-                          <span className="text-slate-400 block text-[11px]">{hist.role_achieved} ({hist.year})</span>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded">
-                          {hist.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-slate-500">Tiada rekod penglibatan lampau direkodkan.</p>
-                )}
-              </div>
-
-            </div>
-
-            <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={() => setSelectedStudentProfile(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
+                id="btn-confirm-delete-action"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/30"
               >
-                Tutup
+                Padam Rekod Ini
               </button>
             </div>
           </div>

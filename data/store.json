@@ -1,0 +1,953 @@
+{
+  "categories": [
+    {
+      "category_id": "cat-music",
+      "name": "Music",
+      "slug": "music",
+      "description": "Bakat vokal, instrumen dan persembahan muzik kolej",
+      "icon": "Music",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "category_id": "cat-speaking",
+      "name": "Public Speaking",
+      "slug": "public-speaking",
+      "description": "Pidato, debat, forum, pengacaraan majlis (Emcee) dan pembentangan",
+      "icon": "Mic",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "category_id": "cat-creative",
+      "name": "Creative & Media",
+      "slug": "creative-media",
+      "description": "Teater, tarian, fotografi, videografi, rekaan grafik dan penciptaan kandungan",
+      "icon": "Palette",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "category_id": "cat-csr",
+      "name": "CSR / Community",
+      "slug": "csr-community",
+      "description": "Sukarelawan, khidmat komuniti, outreach dan program sosial",
+      "icon": "HeartHandshake",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "category_id": "cat-comp",
+      "name": "Competition",
+      "slug": "competition",
+      "description": "Pertandingan akademik, inovasi, sukan dan kemahiran",
+      "icon": "Trophy",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "category_id": "cat-rep",
+      "name": "College Representation",
+      "slug": "college-representation",
+      "description": "Wakil rasmi delegasi, duta pelajar, protokol dan duta kolej",
+      "icon": "Award",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "sk-guitar",
+      "skill_name": "Guitar",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-bass",
+      "skill_name": "Bass",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-vocal",
+      "skill_name": "Vocal",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-keyboard",
+      "skill_name": "Keyboard",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-drum",
+      "skill_name": "Drum",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-band",
+      "skill_name": "Band Ensemble",
+      "category_id": "cat-music",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-ps",
+      "skill_name": "Public Speaking",
+      "category_id": "cat-speaking",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-debate",
+      "skill_name": "Debate",
+      "category_id": "cat-speaking",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-pidato",
+      "skill_name": "Pidato",
+      "category_id": "cat-speaking",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-emcee",
+      "skill_name": "Emcee",
+      "category_id": "cat-speaking",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-theatre",
+      "skill_name": "Theatre & Acting",
+      "category_id": "cat-creative",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-dance",
+      "skill_name": "Dance / Zapin",
+      "category_id": "cat-creative",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-photo",
+      "skill_name": "Photography",
+      "category_id": "cat-creative",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-video",
+      "skill_name": "Videography",
+      "category_id": "cat-creative",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-graphic",
+      "skill_name": "Graphic Design",
+      "category_id": "cat-creative",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-vol",
+      "skill_name": "Volunteer",
+      "category_id": "cat-csr",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-comm",
+      "skill_name": "Community Service",
+      "category_id": "cat-csr",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "skill_id": "sk-lead",
+      "skill_name": "Leadership & Event Mgmt",
+      "category_id": "cat-csr",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "students": [
+    {
+      "student_id": "stu-001",
+      "student_id_number": "PDA-2502-011",
+      "full_name": "NUR AINA BATRISYIA BINTI ZULHILMI",
+      "preferred_name": "Aina",
+      "programme": "Diploma in Accounting (DIA)",
+      "semester": 3,
+      "class": "DIA3A",
+      "gender": "PEREMPUAN",
+      "phone": "014-5313756",
+      "email": "nuraina.batrisyia@student.kpmbp.edu.my",
+      "status": "ACTIVE",
+      "created_at": "2026-02-10T08:30:00Z",
+      "updated_at": "2026-02-10T08:30:00Z"
+    },
+    {
+      "student_id": "stu-002",
+      "student_id_number": "PDL-2503-040",
+      "full_name": "MUHAMMAD FARIS BIN AZMAN",
+      "preferred_name": "Faris",
+      "programme": "Diploma in Business Studies (DBS)",
+      "semester": 2,
+      "class": "DBS2B",
+      "gender": "LELAKI",
+      "phone": "017-8892143",
+      "email": "m.faris@student.kpmbp.edu.my",
+      "status": "ACTIVE",
+      "created_at": "2026-02-12T10:15:00Z",
+      "updated_at": "2026-02-12T10:15:00Z"
+    },
+    {
+      "student_id": "stu-003",
+      "student_id_number": "PLC-2602-015",
+      "full_name": "SITI SARAH BINTI KHAIRUL",
+      "preferred_name": "Sarah",
+      "programme": "Diploma in Information Technology (DIT)",
+      "semester": 1,
+      "class": "DIT1A",
+      "gender": "PEREMPUAN",
+      "phone": "019-3321908",
+      "email": "siti.sarah@student.kpmbp.edu.my",
+      "status": "ACTIVE",
+      "created_at": "2026-02-15T14:20:00Z",
+      "updated_at": "2026-02-15T14:20:00Z"
+    },
+    {
+      "student_id": "stu-004",
+      "student_id_number": "PDA-2401-088",
+      "full_name": "DANISH HAIKAL BIN KAMARUDDIN",
+      "preferred_name": "Danish",
+      "programme": "Diploma in Accounting (DIA)",
+      "semester": 4,
+      "class": "DIA4B",
+      "gender": "LELAKI",
+      "phone": "012-7649801",
+      "email": "danish.haikal@student.kpmbp.edu.my",
+      "status": "ACTIVE",
+      "created_at": "2026-01-20T09:00:00Z",
+      "updated_at": "2026-01-20T09:00:00Z"
+    }
+  ],
+  "studentSkills": [
+    {
+      "student_skill_id": "ss-001",
+      "student_id": "stu-001",
+      "skill_id": "sk-guitar",
+      "skill_level": "ADVANCED",
+      "experience_duration": "3 tahun (Gitar Utama Band Sekolah)",
+      "is_primary": true,
+      "created_at": "2026-02-10T08:30:00Z",
+      "updated_at": "2026-02-10T08:30:00Z"
+    },
+    {
+      "student_skill_id": "ss-002",
+      "student_id": "stu-001",
+      "skill_id": "sk-bass",
+      "skill_level": "INTERMEDIATE",
+      "experience_duration": "1.5 tahun",
+      "is_primary": false,
+      "created_at": "2026-02-10T08:30:00Z",
+      "updated_at": "2026-02-10T08:30:00Z"
+    },
+    {
+      "student_skill_id": "ss-003",
+      "student_id": "stu-001",
+      "skill_id": "sk-ps",
+      "skill_level": "INTERMEDIATE",
+      "experience_duration": "Pembentang kelas cemerlang",
+      "is_primary": false,
+      "created_at": "2026-02-10T08:30:00Z",
+      "updated_at": "2026-02-10T08:30:00Z"
+    },
+    {
+      "student_skill_id": "ss-004",
+      "student_id": "stu-002",
+      "skill_id": "sk-drum",
+      "skill_level": "ADVANCED",
+      "experience_duration": "4 tahun",
+      "is_primary": true,
+      "created_at": "2026-02-12T10:15:00Z",
+      "updated_at": "2026-02-12T10:15:00Z"
+    },
+    {
+      "student_skill_id": "ss-005",
+      "student_id": "stu-002",
+      "skill_id": "sk-bass",
+      "skill_level": "ADVANCED",
+      "experience_duration": "2 tahun",
+      "is_primary": false,
+      "created_at": "2026-02-12T10:15:00Z",
+      "updated_at": "2026-02-12T10:15:00Z"
+    },
+    {
+      "student_skill_id": "ss-006",
+      "student_id": "stu-003",
+      "skill_id": "sk-emcee",
+      "skill_level": "ADVANCED",
+      "experience_duration": "Pengerusi Majlis Rasmi Sekolah & Kolej",
+      "is_primary": true,
+      "created_at": "2026-02-15T14:20:00Z",
+      "updated_at": "2026-02-15T14:20:00Z"
+    },
+    {
+      "student_skill_id": "ss-007",
+      "student_id": "stu-003",
+      "skill_id": "sk-ps",
+      "skill_level": "ADVANCED",
+      "experience_duration": "Naib Johan Pidato Negeri Johor 2024",
+      "is_primary": false,
+      "created_at": "2026-02-15T14:20:00Z",
+      "updated_at": "2026-02-15T14:20:00Z"
+    },
+    {
+      "student_skill_id": "ss-008",
+      "student_id": "stu-004",
+      "skill_id": "sk-photo",
+      "skill_level": "ADVANCED",
+      "experience_duration": "Freelance & Kelab Media KPMBP",
+      "is_primary": true,
+      "created_at": "2026-01-20T09:00:00Z",
+      "updated_at": "2026-01-20T09:00:00Z"
+    },
+    {
+      "student_skill_id": "ss-009",
+      "student_id": "stu-004",
+      "skill_id": "sk-video",
+      "skill_level": "ADVANCED",
+      "experience_duration": "Editor Premiere Pro / DaVinci",
+      "is_primary": false,
+      "created_at": "2026-01-20T09:00:00Z",
+      "updated_at": "2026-01-20T09:00:00Z"
+    }
+  ],
+  "opportunities": [
+    {
+      "opportunity_id": "opp-001",
+      "title": "LEGACY BAND 2026",
+      "slug": "legacy-band-2026",
+      "category_id": "cat-music",
+      "description": "Pencarian bakat pemuzik berbakat KPMBP bagi barisan Legacy Band sesi 2026/2027. Pelajar terpilih akan mewakili kolej dalam acara rasmi, festival muzik antara institusi, konsert SOAR, dan persembahan kebangsaan.",
+      "open_call_roles": [
+        "Guitar",
+        "Bass",
+        "Vocal",
+        "Keyboard",
+        "Drum"
+      ],
+      "requirements": [
+        {
+          "requirement_id": "req-1",
+          "skill_name": "Guitar / Bass / Vocal / Keyboard / Drum",
+          "minimum_level": "INTERMEDIATE",
+          "is_required": true,
+          "notes": "Mempunyai kemahiran asas hingga lanjutan dalam instrumen pilihan."
+        },
+        {
+          "requirement_id": "req-2",
+          "is_required": true,
+          "notes": "Komitmen latihan mingguan & disiplin masa yang tinggi."
+        },
+        {
+          "requirement_id": "req-3",
+          "is_required": false,
+          "notes": "Kelebihan jika boleh menguasai instrumen sekunder (cth: Guitar + Bass)."
+        }
+      ],
+      "opening_date": "2026-08-01T08:00:00Z",
+      "closing_date": "2026-09-01T22:00:00Z",
+      "status": "OPEN",
+      "max_applicants": 50,
+      "banner_tag": "PILOT CALL 2026",
+      "created_by": "adm-001",
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "opportunity_id": "opp-002",
+      "title": "KPMBP PUBLIC SPEAKING TEAM 2026",
+      "slug": "public-speaking-2026",
+      "category_id": "cat-speaking",
+      "description": "Panggilan terbuka barisan pendebat, pemidato, dan pengacara majlis rasmi KPMBP untuk mewakili kolej dalam kejohanan debat kebangsaan serta acara rasmi konvokesyen dan majlis korporat kolej.",
+      "open_call_roles": [
+        "Public Speaking",
+        "Debate",
+        "Pidato",
+        "Emcee"
+      ],
+      "requirements": [
+        {
+          "requirement_id": "req-4",
+          "skill_name": "Public Speaking / Emcee",
+          "minimum_level": "INTERMEDIATE",
+          "is_required": true,
+          "notes": "Kelancaran pengucapan dalam Bahasa Melayu atau Bahasa Inggeris."
+        },
+        {
+          "requirement_id": "req-5",
+          "is_required": true,
+          "notes": "Keyakinan pentas tinggi dan personaliti kemas."
+        }
+      ],
+      "opening_date": "2026-08-10T09:00:00Z",
+      "closing_date": "2026-09-15T23:59:00Z",
+      "status": "OPEN",
+      "created_by": "adm-001",
+      "created_at": "2026-08-10T09:00:00Z",
+      "updated_at": "2026-08-10T09:00:00Z"
+    },
+    {
+      "opportunity_id": "opp-003",
+      "title": "CSR KOMUNITI PRIHATIN BANDAR PENAWAR 2026",
+      "slug": "csr-komuniti-2026",
+      "category_id": "cat-csr",
+      "description": "Panggilan sukarelawan mahasiswa KPMBP bagi program jangkauan komuniti, khidmat bakti masyarakat luar bandar, santunan anak yatim, dan inisiatif pemuliharaan pantai.",
+      "open_call_roles": [
+        "Volunteer",
+        "Community Service",
+        "Logistics",
+        "Facilitator"
+      ],
+      "requirements": [
+        {
+          "requirement_id": "req-6",
+          "is_required": true,
+          "notes": "Semangat kesukarelawanan tinggi dan fizikal sihat."
+        },
+        {
+          "requirement_id": "req-7",
+          "is_required": true,
+          "notes": "Boleh hadir sesi taklimat dan hari pelaksanaan program."
+        }
+      ],
+      "opening_date": "2026-08-15T08:00:00Z",
+      "closing_date": "2026-09-20T23:59:00Z",
+      "status": "OPEN",
+      "created_by": "adm-001",
+      "created_at": "2026-08-15T08:00:00Z",
+      "updated_at": "2026-08-15T08:00:00Z"
+    }
+  ],
+  "opportunityQuestions": [
+    {
+      "question_id": "q-lb-1",
+      "opportunity_id": "opp-001",
+      "question_text": "Instrumen Utama yang Dipohon",
+      "question_type": "SINGLE_SELECT",
+      "is_required": true,
+      "sort_order": 1,
+      "options": [
+        "Lead Guitar",
+        "Rhythm Guitar",
+        "Bass Guitar",
+        "Lead Vocal",
+        "Keyboard / Synth",
+        "Drum / Percussion"
+      ],
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "question_id": "q-lb-2",
+      "opportunity_id": "opp-001",
+      "question_text": "Tahap Kemahiran & Pengalaman Bermuzik",
+      "question_type": "SINGLE_SELECT",
+      "is_required": true,
+      "sort_order": 2,
+      "options": [
+        "Beginner (Kurang 1 tahun)",
+        "Intermediate (1 - 3 tahun / Pernah main band pentas)",
+        "Advanced (3+ tahun / Berpengalaman band pertandingan/rakaman)"
+      ],
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "question_id": "q-lb-3",
+      "opportunity_id": "opp-001",
+      "question_text": "Instrumen Tambahan / Kebolehan Sekunder",
+      "question_type": "TEXTAREA",
+      "placeholder": "Contoh: Saya pemain Gitar utama tetapi mahir bermain Bass dan boleh menyanyi vokal latar...",
+      "help_text": "Nyatakan instrumen tambahan yang anda boleh main jika formasi band memerlukan.",
+      "is_required": false,
+      "sort_order": 3,
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "question_id": "q-lb-4",
+      "opportunity_id": "opp-001",
+      "question_text": "Pautan Video Uji Bakat / Demo Rakaman",
+      "question_type": "VIDEO_LINK",
+      "placeholder": "https://youtu.be/... atau pautan Google Drive terbuka",
+      "help_text": "Sertakan pautan video (1-3 minit) anda memainkan lagu atau solo instrumen pilihan.",
+      "is_required": true,
+      "sort_order": 4,
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "question_id": "q-lb-5",
+      "opportunity_id": "opp-001",
+      "question_text": "Saya bersedia memberikan komitmen latihan mingguan dan mematuhi etika persembahan kolej.",
+      "question_type": "BOOLEAN",
+      "is_required": true,
+      "sort_order": 5,
+      "created_at": "2026-08-01T08:00:00Z",
+      "updated_at": "2026-08-01T08:00:00Z"
+    },
+    {
+      "question_id": "q-ps-1",
+      "opportunity_id": "opp-002",
+      "question_text": "Kategori Pengucapan Pilihan",
+      "question_type": "SINGLE_SELECT",
+      "is_required": true,
+      "sort_order": 1,
+      "options": [
+        "Public Speaking (Bahasa Inggeris)",
+        "Pidato (Bahasa Melayu)",
+        "Debat Antara IPT",
+        "Pengacara Majlis (Emcee Rasmi)"
+      ],
+      "created_at": "2026-08-10T09:00:00Z",
+      "updated_at": "2026-08-10T09:00:00Z"
+    },
+    {
+      "question_id": "q-ps-2",
+      "opportunity_id": "opp-002",
+      "question_text": "Pengalaman & Pencapaian Terdahulu",
+      "question_type": "TEXTAREA",
+      "placeholder": "Senaraikan pengalaman, jawatan atau anugerah pengucapan awam di peringkat sekolah/kolej...",
+      "is_required": true,
+      "sort_order": 2,
+      "created_at": "2026-08-10T09:00:00Z",
+      "updated_at": "2026-08-10T09:00:00Z"
+    },
+    {
+      "question_id": "q-ps-3",
+      "opportunity_id": "opp-002",
+      "question_text": "Pautan Video Contoh Pengucapan (1 - 2 Minit)",
+      "question_type": "VIDEO_LINK",
+      "placeholder": "https://drive.google.com/... atau YouTube",
+      "is_required": true,
+      "sort_order": 3,
+      "created_at": "2026-08-10T09:00:00Z",
+      "updated_at": "2026-08-10T09:00:00Z"
+    },
+    {
+      "question_id": "q-csr-1",
+      "opportunity_id": "opp-003",
+      "question_text": "Pengalaman Sukarelawan & Khidmat Komuniti",
+      "question_type": "TEXTAREA",
+      "placeholder": "Ceritakan pengalaman penglibatan aktiviti kebajikan atau kelab sebelum ini...",
+      "is_required": true,
+      "sort_order": 1,
+      "created_at": "2026-08-15T08:00:00Z",
+      "updated_at": "2026-08-15T08:00:00Z"
+    },
+    {
+      "question_id": "q-csr-2",
+      "opportunity_id": "opp-003",
+      "question_text": "Peranan / Skop Sumbangan Utama",
+      "question_type": "MULTI_SELECT",
+      "is_required": true,
+      "sort_order": 2,
+      "options": [
+        "Fasilitator Aktiviti",
+        "Logistik & Teknikal",
+        "Fotografi & Media",
+        "Katering & Makanan",
+        "Pendaftaran & Keselamatan"
+      ],
+      "created_at": "2026-08-15T08:00:00Z",
+      "updated_at": "2026-08-15T08:00:00Z"
+    }
+  ],
+  "applications": [
+    {
+      "application_id": "app-001",
+      "student_id": "stu-001",
+      "opportunity_id": "opp-001",
+      "status": "SCREENING",
+      "submitted_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-21T09:15:00Z",
+      "reviewed_by": "adm-001",
+      "reviewed_at": "2026-08-21T09:15:00Z",
+      "admin_notes": "Pemain gitar berkebolehan tinggi, timing kemas. Kemahiran Bass juga mantap."
+    },
+    {
+      "application_id": "app-002",
+      "student_id": "stu-002",
+      "opportunity_id": "opp-001",
+      "status": "SHORTLISTED",
+      "submitted_at": "2026-08-22T14:00:00Z",
+      "updated_at": "2026-08-24T16:00:00Z",
+      "reviewed_by": "adm-001",
+      "reviewed_at": "2026-08-24T16:00:00Z",
+      "admin_notes": "Pemain drum agresif dan berdisiplin. Sedia untuk sesi trial."
+    },
+    {
+      "application_id": "app-003",
+      "student_id": "stu-003",
+      "opportunity_id": "opp-002",
+      "status": "SELECTED",
+      "submitted_at": "2026-08-18T10:00:00Z",
+      "updated_at": "2026-08-25T11:00:00Z",
+      "reviewed_by": "adm-001",
+      "reviewed_at": "2026-08-25T11:00:00Z",
+      "admin_notes": "Dicalonkan sebagai Pengacara Utama Majlis Anugerah Kecemerlangan KPMBP."
+    }
+  ],
+  "applicationResponses": [
+    {
+      "response_id": "resp-001",
+      "application_id": "app-001",
+      "question_id": "q-lb-1",
+      "response_value": "Lead Guitar",
+      "created_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-20T11:30:00Z"
+    },
+    {
+      "response_id": "resp-002",
+      "application_id": "app-001",
+      "question_id": "q-lb-2",
+      "response_value": "Advanced (3+ tahun / Berpengalaman band pertandingan/rakaman)",
+      "created_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-20T11:30:00Z"
+    },
+    {
+      "response_id": "resp-003",
+      "application_id": "app-001",
+      "question_id": "q-lb-3",
+      "response_value": "Boleh cover Bass jika diperlukan, serta boleh menyanyi back-up vocal harmoni.",
+      "created_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-20T11:30:00Z"
+    },
+    {
+      "response_id": "resp-004",
+      "application_id": "app-001",
+      "question_id": "q-lb-4",
+      "response_value": "https://youtube.com/watch?v=demo-aina-lead-guitar",
+      "created_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-20T11:30:00Z"
+    },
+    {
+      "response_id": "resp-005",
+      "application_id": "app-001",
+      "question_id": "q-lb-5",
+      "response_value": true,
+      "created_at": "2026-08-20T11:30:00Z",
+      "updated_at": "2026-08-20T11:30:00Z"
+    },
+    {
+      "response_id": "resp-006",
+      "application_id": "app-002",
+      "question_id": "q-lb-1",
+      "response_value": "Drum / Percussion",
+      "created_at": "2026-08-22T14:00:00Z",
+      "updated_at": "2026-08-22T14:00:00Z"
+    },
+    {
+      "response_id": "resp-007",
+      "application_id": "app-002",
+      "question_id": "q-lb-2",
+      "response_value": "Advanced (3+ tahun / Berpengalaman band pertandingan/rakaman)",
+      "created_at": "2026-08-22T14:00:00Z",
+      "updated_at": "2026-08-22T14:00:00Z"
+    },
+    {
+      "response_id": "resp-008",
+      "application_id": "app-002",
+      "question_id": "q-lb-4",
+      "response_value": "https://youtube.com/watch?v=demo-faris-drum-groove",
+      "created_at": "2026-08-22T14:00:00Z",
+      "updated_at": "2026-08-22T14:00:00Z"
+    },
+    {
+      "response_id": "resp-009",
+      "application_id": "app-002",
+      "question_id": "q-lb-5",
+      "response_value": true,
+      "created_at": "2026-08-22T14:00:00Z",
+      "updated_at": "2026-08-22T14:00:00Z"
+    },
+    {
+      "response_id": "resp-010",
+      "application_id": "app-003",
+      "question_id": "q-ps-1",
+      "response_value": "Pengacara Majlis (Emcee Rasmi)",
+      "created_at": "2026-08-18T10:00:00Z",
+      "updated_at": "2026-08-18T10:00:00Z"
+    },
+    {
+      "response_id": "resp-011",
+      "application_id": "app-003",
+      "question_id": "q-ps-2",
+      "response_value": "Emcee Majlis Perasmian Minggu Destinasi Siswa KPMBP, Naib Johan Pidato Negeri Johor 2024.",
+      "created_at": "2026-08-18T10:00:00Z",
+      "updated_at": "2026-08-18T10:00:00Z"
+    },
+    {
+      "response_id": "resp-012",
+      "application_id": "app-003",
+      "question_id": "q-ps-3",
+      "response_value": "https://drive.google.com/file/d/siti-sarah-emcee-sample",
+      "created_at": "2026-08-18T10:00:00Z",
+      "updated_at": "2026-08-18T10:00:00Z"
+    }
+  ],
+  "applicationStatusHistory": [
+    {
+      "history_id": "h-001",
+      "application_id": "app-001",
+      "old_status": null,
+      "new_status": "SUBMITTED",
+      "changed_by": "SISTEM",
+      "changed_at": "2026-08-20T11:30:00Z",
+      "remarks": "Permohonan dihantar oleh pelajar."
+    },
+    {
+      "history_id": "h-002",
+      "application_id": "app-001",
+      "old_status": "SUBMITTED",
+      "new_status": "SCREENING",
+      "changed_by": "Admin KPMBP (En. Zulkifli)",
+      "changed_at": "2026-08-21T09:15:00Z",
+      "remarks": "Penapisan video uji bakat & semakan instrumen."
+    },
+    {
+      "history_id": "h-003",
+      "application_id": "app-002",
+      "old_status": null,
+      "new_status": "SUBMITTED",
+      "changed_by": "SISTEM",
+      "changed_at": "2026-08-22T14:00:00Z",
+      "remarks": "Permohonan dihantar."
+    },
+    {
+      "history_id": "h-004",
+      "application_id": "app-002",
+      "old_status": "SUBMITTED",
+      "new_status": "SCREENING",
+      "changed_by": "Admin KPMBP",
+      "changed_at": "2026-08-23T10:00:00Z",
+      "remarks": "Video drum disemak."
+    },
+    {
+      "history_id": "h-005",
+      "application_id": "app-002",
+      "old_status": "SCREENING",
+      "new_status": "INTERVIEW",
+      "changed_by": "Admin KPMBP",
+      "changed_at": "2026-08-24T10:00:00Z",
+      "remarks": "Dipanggil sesi temuduga & audisi fizikal di Studio Muzik."
+    },
+    {
+      "history_id": "h-006",
+      "application_id": "app-002",
+      "old_status": "INTERVIEW",
+      "new_status": "SHORTLISTED",
+      "changed_by": "Admin KPMBP",
+      "changed_at": "2026-08-24T16:00:00Z",
+      "remarks": "Disenarai pendek untuk posisi Drummer Utama."
+    },
+    {
+      "history_id": "h-007",
+      "application_id": "app-003",
+      "old_status": null,
+      "new_status": "SUBMITTED",
+      "changed_by": "SISTEM",
+      "changed_at": "2026-08-18T10:00:00Z"
+    },
+    {
+      "history_id": "h-008",
+      "application_id": "app-003",
+      "old_status": "SUBMITTED",
+      "new_status": "SHORTLISTED",
+      "changed_by": "Admin KPMBP",
+      "changed_at": "2026-08-20T14:00:00Z"
+    },
+    {
+      "history_id": "h-009",
+      "application_id": "app-003",
+      "old_status": "SHORTLISTED",
+      "new_status": "SELECTED",
+      "changed_by": "Admin KPMBP",
+      "changed_at": "2026-08-25T11:00:00Z",
+      "remarks": "Pengesahan lantikan Emcee Rasmi KPMBP."
+    }
+  ],
+  "adminNotes": [
+    {
+      "note_id": "an-001",
+      "application_id": "app-001",
+      "admin_id": "adm-001",
+      "admin_name": "En. Zulkifli (Ketua Penasihat Kebudayaan)",
+      "note": "Bakat gitar yang sangat versatil. Cadangan: Uji gandingan dengan Faris dalam sesi studio.",
+      "created_at": "2026-08-21T09:15:00Z"
+    },
+    {
+      "note_id": "an-002",
+      "application_id": "app-002",
+      "admin_id": "adm-001",
+      "admin_name": "En. Zulkifli",
+      "note": "Mempunyai tempo dan dinamik yang solid. Kehadiran latihan sebelum ini sangat cemerlang.",
+      "created_at": "2026-08-24T16:00:00Z"
+    }
+  ],
+  "invitations": [
+    {
+      "invitation_id": "inv-001",
+      "student_id": "stu-001",
+      "opportunity_id": "opp-002",
+      "invited_by": "adm-001",
+      "invited_by_name": "Pentadbir Unit Bakat KPMBP",
+      "status": "PENDING",
+      "notes": "Berdasarkan kemahiran Public Speaking anda, Admin menjemput anda menyertai Public Speaking Team.",
+      "created_at": "2026-08-26T10:00:00Z"
+    }
+  ],
+  "participationHistory": [
+    {
+      "participation_id": "part-001",
+      "student_id": "stu-001",
+      "opportunity_id": "opp-past-01",
+      "opportunity_title": "KONSERT SOAR 2025",
+      "category": "Music",
+      "role_achieved": "Rhythm Guitarist",
+      "year": 2025,
+      "status": "COMPLETED",
+      "verified_at": "2025-11-15T00:00:00Z"
+    },
+    {
+      "participation_id": "part-002",
+      "student_id": "stu-003",
+      "opportunity_id": "opp-past-02",
+      "opportunity_title": "MAJLIS KONVOKESYEN KPMBP KE-18",
+      "category": "College Representation",
+      "role_achieved": "Pengerusi Majlis Sidang 1",
+      "year": 2025,
+      "status": "COMPLETED",
+      "verified_at": "2025-10-20T00:00:00Z"
+    }
+  ],
+  "adminUsers": [
+    {
+      "admin_id": "adm-001",
+      "name": "Pentadbiran Utama Hal Ehwal Pelajar KPMBP",
+      "email": "admin.bakat@kpmbp.edu.my",
+      "role": "SUPER_ADMIN",
+      "department": "Unit Kebudayaan, Sukan & Kepimpinan Pelajar",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "admin_id": "adm-002",
+      "name": "Pegawai Pembangunan Bakat & Kokurikulum",
+      "email": "pegawai.hep@kpmbp.edu.my",
+      "role": "ADMIN",
+      "department": "Hal Ehwal Pelajar (HEP)",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "admin_id": "adm-003",
+      "name": "Panel Penilai & Pengadil Bakat",
+      "email": "panel.kebudayaan@kpmbp.edu.my",
+      "role": "REVIEWER",
+      "department": "Panel Uji Bakat & Audisi",
+      "status": "ACTIVE",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "log_id": "log-1788189612494-k5w3",
+      "action": "ADMIN_LOGIN",
+      "entity_type": "AUTH",
+      "entity_id": "adm-001",
+      "actor_id": "adm-001",
+      "actor_name": "Pentadbiran Utama Hal Ehwal Pelajar KPMBP",
+      "actor_role": "SUPER_ADMIN",
+      "timestamp": "2026-08-31T15:20:12.494Z",
+      "details": "Log masuk berjaya dari akaun admin.bakat@kpmbp.edu.my (SUPER_ADMIN)."
+    },
+    {
+      "log_id": "log-1788189609075-jfru",
+      "action": "ADMIN_LOGIN",
+      "entity_type": "AUTH",
+      "entity_id": "adm-001",
+      "actor_id": "adm-001",
+      "actor_name": "Pentadbiran Utama Hal Ehwal Pelajar KPMBP",
+      "actor_role": "SUPER_ADMIN",
+      "timestamp": "2026-08-31T15:20:09.075Z",
+      "details": "Log masuk berjaya dari akaun admin.bakat@kpmbp.edu.my (SUPER_ADMIN)."
+    },
+    {
+      "log_id": "log-001",
+      "action": "SYSTEM_BOOT",
+      "entity_type": "AUTH",
+      "entity_id": "sys",
+      "actor_id": "adm-001",
+      "actor_name": "Sistem KPMBP",
+      "actor_role": "SUPER_ADMIN",
+      "timestamp": "2026-08-30T00:00:00Z",
+      "details": "Pangkalan data SES 4.4 dimulakan dengan integriti relasional penuh."
+    }
+  ],
+  "notifications": [
+    {
+      "notification_id": "notif-001",
+      "recipient_type": "STUDENT",
+      "recipient_id": "stu-001",
+      "title": "Jemputan Menyertai Public Speaking Team 2026",
+      "message": "Pentadbir Unit Bakat KPMBP telah menjemput anda menyertai panggilan terbuka KPMBP Public Speaking Team 2026.",
+      "type": "INVITATION_RECEIVED",
+      "related_entity_id": "inv-001",
+      "is_read": false,
+      "created_at": "2026-08-26T10:00:00Z"
+    },
+    {
+      "notification_id": "notif-002",
+      "recipient_type": "ADMIN",
+      "recipient_id": "ALL_ADMINS",
+      "title": "Permohonan Baru: Legacy Band 2026",
+      "message": "NUR AINA BATRISYIA BINTI ZULHILMI telah menghantar permohonan untuk posisi Lead Guitar.",
+      "type": "APPLICATION_SUBMITTED",
+      "related_entity_id": "app-001",
+      "is_read": false,
+      "created_at": "2026-08-20T11:30:00Z"
+    }
+  ]
+}
