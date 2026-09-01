@@ -60,6 +60,7 @@ import { AdminDataSafety } from './admin/AdminDataSafety.tsx';
 import { AdminTalentIntelligence } from './admin/AdminTalentIntelligence.tsx';
 import { AdminPilotFeedback } from './admin/AdminPilotFeedback.tsx';
 import { AdminTalentProfileModal } from './admin/AdminTalentProfileModal.tsx';
+import { SES44Sandbox } from './SES44Sandbox.tsx';
 import { calculateOpportunityMatch } from '../lib/matching.ts';
 
 export const AdminPortal: React.FC = () => {
@@ -73,7 +74,7 @@ export const AdminPortal: React.FC = () => {
     return null;
   });
 
-  const [subView, setSubView] = useState<'dashboard' | 'opportunities' | 'applications' | 'matching' | 'talentSearch' | 'students' | 'talentIntelligence' | 'dataSafety' | 'audit' | 'firebase' | 'pilotFeedback'>('dashboard');
+  const [subView, setSubView] = useState<'dashboard' | 'opportunities' | 'applications' | 'matching' | 'talentSearch' | 'students' | 'talentIntelligence' | 'dataSafety' | 'audit' | 'firebase' | 'pilotFeedback' | 'sandbox'>('dashboard');
 
   // State collections
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -275,10 +276,20 @@ export const AdminPortal: React.FC = () => {
     }
   }, [authToken]);
 
+  useEffect(() => {
+    const handleRemoteLogout = () => {
+      setAuthToken(null);
+      setAdminUser(null);
+    };
+    window.addEventListener('kpmbp_admin_logout', handleRemoteLogout);
+    return () => window.removeEventListener('kpmbp_admin_logout', handleRemoteLogout);
+  }, []);
+
   const handleLoginSuccess = (token: string, user: AdminUser) => {
     setAuthToken(token);
     setAdminUser(user);
     setSubView('dashboard');
+    window.dispatchEvent(new Event('kpmbp_admin_login'));
   };
 
   const handleLogout = async () => {
@@ -296,6 +307,7 @@ export const AdminPortal: React.FC = () => {
       setAdminUser(null);
       sessionStorage.removeItem('kpmbp_admin_token');
       sessionStorage.removeItem('kpmbp_admin_user');
+      window.dispatchEvent(new Event('kpmbp_admin_logout'));
     }
   };
 
@@ -787,6 +799,20 @@ export const AdminPortal: React.FC = () => {
               <Database className="w-3.5 h-3.5" />
               <span>Cloud Firestore</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+            </button>
+
+            {/* SES 4.4 Sandbox Subtab */}
+            <button
+              type="button"
+              id="admin-subtab-sandbox"
+              onClick={() => setSubView('sandbox')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                subView === 'sandbox' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-white'
+              }`}
+              title="SES 4.4 Normalization, Matching & Storage Sandbox"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+              <span>SES 4.4 Sandbox</span>
             </button>
           </div>
         </div>
@@ -1553,6 +1579,13 @@ export const AdminPortal: React.FC = () => {
             authToken={authToken}
             adminUser={adminUser}
           />
+        )}
+
+        {/* -------------------------------------------------------------
+            SUBVIEW 12: SES 4.4 SANDBOX (NORMALIZATION, MATCHING & SIMULATOR)
+           ------------------------------------------------------------- */}
+        {subView === 'sandbox' && (
+          <SES44Sandbox />
         )}
 
       </div>

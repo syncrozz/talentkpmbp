@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { StudentPortal } from './components/StudentPortal.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
-import { SES44Sandbox } from './components/SES44Sandbox.tsx';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'student' | 'admin' | 'sandbox'>('student');
+  const [currentView, setCurrentView] = useState<'student' | 'admin'>('student');
   const [targetSlug, setTargetSlug] = useState<string | null>(null);
 
   // Check URL pathname or hash for direct slug access (e.g. /legacy-band-2026 or #legacy-band-2026)
@@ -15,7 +14,7 @@ export default function App() {
       const hash = window.location.hash.replace(/^#\/?/, '');
       const potentialSlug = path || hash;
 
-      if (potentialSlug && !['admin', 'sandbox', 'student'].includes(potentialSlug)) {
+      if (potentialSlug && !['admin', 'student'].includes(potentialSlug)) {
         setTargetSlug(potentialSlug);
         setCurrentView('student');
       }
@@ -37,6 +36,11 @@ export default function App() {
     window.history.pushState(null, '', '/');
   };
 
+  const handleGoHome = () => {
+    setCurrentView('student');
+    handleClearTargetSlug();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
@@ -49,6 +53,7 @@ export default function App() {
             setTargetSlug(null);
           }
         }}
+        onGoHome={handleGoHome}
         onOpenSlugDirectly={handleOpenSlugDirectly}
       />
 
@@ -63,10 +68,6 @@ export default function App() {
 
         {currentView === 'admin' && (
           <AdminPortal />
-        )}
-
-        {currentView === 'sandbox' && (
-          <SES44Sandbox />
         )}
       </main>
 

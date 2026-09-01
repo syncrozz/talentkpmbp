@@ -143,6 +143,27 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }
   }, []);
 
+  // Reset to default Home view upon primary branding Home trigger
+  useEffect(() => {
+    const handleHomeTrigger = () => {
+      setSelectedOpp(null);
+      setApplyingOpp(null);
+      setIsFeedbackModalOpen(false);
+      setViewingApp(null);
+      setWithdrawingAppId(null);
+      setActiveTab('opportunities');
+      setSelectedCategory('all');
+      setSearchQuery('');
+      if (onClearInitialSlug) {
+        onClearInitialSlug();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('kpmbp_go_home', handleHomeTrigger);
+    return () => window.removeEventListener('kpmbp_go_home', handleHomeTrigger);
+  }, [onClearInitialSlug]);
+
   const performTrack = async (rawId: string) => {
     setTrackerError(null);
     setActionSuccessMsg(null);
@@ -635,7 +656,17 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <div
                     key={opp.opportunity_id}
                     id={`card-opp-${opp.slug}`}
-                    className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:shadow-blue-500/5 transition-all group"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Buka maklumat penuh ${opp.title}`}
+                    onClick={() => setSelectedOpp(opp)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        if (e.key === ' ') e.preventDefault();
+                        setSelectedOpp(opp);
+                      }
+                    }}
+                    className="bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:shadow-xl hover:shadow-blue-500/5 transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                   >
                     <div className="space-y-4">
                       {/* Category & Status */}
@@ -651,9 +682,12 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
                       {/* Title & Slug */}
                       <div>
-                        <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
-                          {opp.title}
-                        </h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
+                            {opp.title}
+                          </h3>
+                          <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all shrink-0 mt-1" />
+                        </div>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">/{opp.slug}</p>
                       </div>
 
@@ -674,38 +708,31 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                       </p>
                     </div>
 
-                    {/* Footer & CTA */}
-                    <div className="pt-5 mt-4 border-t border-slate-800/80 space-y-3">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
+                    {/* Footer & Quick Apply */}
+                    <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 text-xs text-slate-400">
                         <div className="flex items-center space-x-1">
                           <Clock className="w-3.5 h-3.5 text-amber-400" />
                           <span>Tutup: {new Date(opp.closing_date).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' })}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="w-3.5 h-3.5 text-blue-400" />
-                          <span>{opp.total_applications || 0} pemohon</span>
+                          <span>{opp.total_applications || 0}</span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          id={`btn-view-opp-${opp.slug}`}
-                          onClick={() => setSelectedOpp(opp)}
-                          className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition-colors text-center"
-                        >
-                          Maklumat Penuh
-                        </button>
-                        <button
-                          type="button"
-                          id={`btn-quick-apply-${opp.slug}`}
-                          onClick={() => setApplyingOpp(opp)}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center space-x-1 shadow-md shadow-blue-600/20"
-                        >
-                          <span>Mohon</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        id={`btn-quick-apply-${opp.slug}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setApplyingOpp(opp);
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all flex items-center space-x-1 shadow-md shadow-blue-600/20 hover:shadow-blue-500/30"
+                      >
+                        <span>Mohon</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}

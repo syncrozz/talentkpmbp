@@ -48,6 +48,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
       // Save in session storage
       sessionStorage.setItem('kpmbp_admin_token', data.token);
       sessionStorage.setItem('kpmbp_admin_user', JSON.stringify(data.user));
+      window.dispatchEvent(new Event('kpmbp_admin_login'));
 
       onLoginSuccess(data.token, data.user);
     } catch (err: any) {
@@ -117,7 +118,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
                   id="admin-login-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin.bakat@kpmbp.edu.my"
+                  placeholder="khaikerr@gmail.com"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
                   required
                 />
@@ -183,14 +184,14 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 id="btn-quick-login-superadmin"
-                onClick={() => handleQuickLogin('admin.bakat@kpmbp.edu.my', 'kpmbp2026!')}
+                onClick={() => handleQuickLogin('khaikerr@gmail.com', '135657Kn*')}
                 className="bg-slate-950 hover:bg-slate-850 border border-purple-500/30 hover:border-purple-500/60 p-3 rounded-xl text-left transition-all group"
               >
                 <div className="flex items-center space-x-1.5 mb-1">
                   <span className="w-2 h-2 rounded-full bg-purple-400"></span>
                   <span className="text-[11px] font-bold text-purple-300 uppercase">Super Admin</span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate">admin.bakat@kpmbp.edu.my</p>
+                <p className="text-[10px] text-slate-400 truncate">khaikerr@gmail.com</p>
                 <span className="text-[9px] text-purple-400/80 block mt-1">Akses Penuh + Hapus + Audit</span>
               </button>
 

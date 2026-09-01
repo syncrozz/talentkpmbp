@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   GraduationCap, 
   Search, 
@@ -9,24 +9,73 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   ExternalLink,
-  MessageSquarePlus
+  MessageSquarePlus,
+  LogOut
 } from 'lucide-react';
 import { PilotFeedbackModal } from './PilotFeedbackModal.tsx';
 
 interface NavbarProps {
-  currentView: 'student' | 'admin' | 'sandbox';
-  setCurrentView: (view: 'student' | 'admin' | 'sandbox') => void;
+  currentView: 'student' | 'admin';
+  setCurrentView: (view: 'student' | 'admin') => void;
+  onGoHome?: () => void;
   onOpenSlugDirectly?: (slug: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   setCurrentView,
+  onGoHome,
   onOpenSlugDirectly,
 }) => {
   const [quickSlug, setQuickSlug] = useState('');
   const [showSlugInput, setShowSlugInput] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+    return !!sessionStorage.getItem('kpmbp_admin_token');
+  });
+
+  useEffect(() => {
+    const updateAdminAuthState = () => {
+      const token = sessionStorage.getItem('kpmbp_admin_token');
+      setIsAdminLoggedIn(!!token);
+    };
+
+    window.addEventListener('kpmbp_admin_login', updateAdminAuthState);
+    window.addEventListener('kpmbp_admin_logout', updateAdminAuthState);
+    window.addEventListener('storage', updateAdminAuthState);
+
+    // Periodic sync check
+    const timer = setInterval(updateAdminAuthState, 800);
+
+    return () => {
+      window.removeEventListener('kpmbp_admin_login', updateAdminAuthState);
+      window.removeEventListener('kpmbp_admin_logout', updateAdminAuthState);
+      window.removeEventListener('storage', updateAdminAuthState);
+      clearInterval(timer);
+    };
+  }, []);
+
+  const handleBrandHomeClick = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e && 'key' in e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.key === ' ') e.preventDefault();
+    }
+
+    // 1. Close local modals / inputs / popovers
+    setShowSlugInput(false);
+    setQuickSlug('');
+    setIsFeedbackOpen(false);
+
+    // 2. Dispatch global event to close dialogs/overlays across all portal views
+    window.dispatchEvent(new Event('kpmbp_go_home'));
+
+    // 3. Client-side navigation to Home
+    if (onGoHome) {
+      onGoHome();
+    } else {
+      setCurrentView('student');
+    }
+  };
 
   const handleSlugSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,16 +86,46 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const handleAdminClick = async () => {
+    if (isAdminLoggedIn) {
+      // Mod admin aktif (Hijau) -> klik untuk log keluar
+      try {
+        const token = sessionStorage.getItem('kpmbp_admin_token');
+        if (token) {
+          await fetch('/api/admin/logout', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
+      } catch (e) {
+        // ignore network error on logout
+      } finally {
+        sessionStorage.removeItem('kpmbp_admin_token');
+        sessionStorage.removeItem('kpmbp_admin_user');
+        setIsAdminLoggedIn(false);
+        window.dispatchEvent(new Event('kpmbp_admin_logout'));
+        setCurrentView('student');
+      }
+    } else {
+      // Belum log masuk -> buka paparan log masuk admin (butang kekal oren)
+      setCurrentView('admin');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           
-          {/* Logo & College Identity */}
+          {/* Logo & College Identity - Primary Branding Home Trigger */}
           <div 
             id="brand-logo"
-            onClick={() => setCurrentView('student')}
-            className="flex items-center space-x-3 cursor-pointer group select-none"
+            role="button"
+            tabIndex={0}
+            aria-label="KPMBP TALENT - Kembali ke Laman Utama"
+            onClick={handleBrandHomeClick}
+            onKeyDown={handleBrandHomeClick}
+            className="flex items-center space-x-3 cursor-pointer group select-none rounded-xl p-1 -m-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 transition-all"
           >
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:scale-105 transition-transform">
               <GraduationCap className="w-6 h-6 text-white" />
@@ -131,30 +210,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 id="tab-nav-admin"
-                onClick={() => setCurrentView('admin')}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  currentView === 'admin'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                onClick={handleAdminClick}
+                title={isAdminLoggedIn ? 'Mod Admin Aktif — Klik untuk Log Keluar' : 'Akses Portal Pentadbir & Saringan'}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  isAdminLoggedIn
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 border border-emerald-500'
+                    : 'bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 hover:text-orange-300 border border-orange-500/40 hover:border-orange-500/70'
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-300" />
-                <span>Pentadbiran &amp; Saringan</span>
-              </button>
-
-              <button
-                type="button"
-                id="tab-nav-sandbox"
-                onClick={() => setCurrentView('sandbox')}
-                className={`hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  currentView === 'sandbox'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-                title="SES 4.4 Data Normalization, Matching & Storage Tester"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>SES 4.4 Sandbox</span>
+                {isAdminLoggedIn ? (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
+                    <span>Admin</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" title="Sesi Aktif" />
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400" />
+                    <span>Admin</span>
+                  </>
+                )}
               </button>
             </nav>
 

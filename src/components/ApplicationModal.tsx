@@ -30,7 +30,8 @@ import {
   maskPhoneInput, 
   normalizePhone, 
   normalizeFullName, 
-  normalizeEmail 
+  normalizeEmail,
+  formatTitleCase
 } from '../lib/normalization.ts';
 
 interface ApplicationModalProps {
@@ -55,9 +56,9 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [studentIdInput, setStudentIdInput] = useState<string>('');
   const [fullName, setFullName] = useState<string>('');
   const [preferredName, setPreferredName] = useState<string>('');
-  const [programme, setProgramme] = useState<string>('Diploma in Accounting (DIA)');
+  const [programme, setProgramme] = useState<string>('DLM - Diploma in Logistics Management');
   const [semester, setSemester] = useState<number>(1);
-  const [className, setClassName] = useState<string>('DIA1A');
+  const [className, setClassName] = useState<string>('DLM1A');
   const [gender, setGender] = useState<'LELAKI' | 'PEREMPUAN'>('LELAKI');
   const [phone, setPhone] = useState<string>('');
   const [email, setEmail] = useState<string>('');
@@ -93,10 +94,10 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
           const studentData: Student = await res.json();
           setProfileFound(true);
           setFullName(studentData.full_name);
-          setPreferredName(studentData.preferred_name || '');
-          setProgramme(studentData.programme || 'Diploma in Accounting (DIA)');
+          setPreferredName(formatTitleCase(studentData.preferred_name || ''));
+          setProgramme(studentData.programme || 'DLM - Diploma in Logistics Management');
           setSemester(studentData.semester || 1);
-          setClassName(studentData.class || 'DIA1A');
+          setClassName(studentData.class || 'DLM1A');
           setGender(studentData.gender || 'LELAKI');
           setPhone(studentData.phone || '');
           setEmail(studentData.email || '');
@@ -244,7 +245,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       student_data: {
         student_id_number: normalizeStudentIdNumber(studentIdInput).normalized,
         full_name: normalizeFullName(fullName),
-        preferred_name: preferredName.trim(),
+        preferred_name: formatTitleCase(preferredName).trim(),
         programme,
         semester,
         class: className.toUpperCase().trim(),
@@ -432,7 +433,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                     type="text"
                     id="input-preferred-name"
                     value={preferredName}
-                    onChange={(e) => setPreferredName(e.target.value)}
+                    onChange={(e) => setPreferredName(formatTitleCase(e.target.value))}
                     placeholder="Aina"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
@@ -451,11 +452,9 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                     onChange={(e) => setProgramme(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="Diploma in Accounting (DIA)">Diploma in Accounting (DIA)</option>
-                    <option value="Diploma in Business Studies (DBS)">Diploma in Business Studies (DBS)</option>
-                    <option value="Diploma in Information Technology (DIT)">Diploma in Information Technology (DIT)</option>
-                    <option value="Diploma in Computer Science (DCIS)">Diploma in Computer Science (DCIS)</option>
-                    <option value="Program Lain-lain">Program Lain-lain</option>
+                    <option value="DLM - Diploma in Logistics Management">DLM - Diploma in Logistics Management</option>
+                    <option value="DIA - Diploma in Accountancy">DIA - Diploma in Accountancy</option>
+                    <option value="PRA DIP - Pra Diploma">PRA DIP - Pra Diploma</option>
                   </select>
                 </div>
 
@@ -531,7 +530,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                     id="input-email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                    placeholder="pelajar@student.kpmbp.edu.my"
+                    placeholder="nama@bpenawar.kpm.edu.my"
                     className={`w-full bg-slate-950 border ${errors.email ? 'border-rose-500' : 'border-slate-700'} rounded-xl px-4 py-2.5 text-white lowercase focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
                   />
                   {errors.email && <p className="text-xs text-rose-400 mt-1">{errors.email}</p>}

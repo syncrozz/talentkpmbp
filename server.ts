@@ -57,9 +57,15 @@ const activeSessions = new Map<string, { admin_id: string; role: AdminRole; emai
 
 // Predefined secure credentials for KPMBP Administrative Roles
 const ADMIN_CREDENTIALS: Record<string, { role: AdminRole; passkey: string; name: string; dept: string }> = {
+  'khaikerr@gmail.com': {
+    role: AdminRole.SUPER_ADMIN,
+    passkey: '135657Kn*',
+    name: 'Super Admin KPMBP',
+    dept: 'Unit Kebudayaan, Sukan & Kepimpinan Pelajar',
+  },
   'admin.bakat@kpmbp.edu.my': {
     role: AdminRole.SUPER_ADMIN,
-    passkey: 'kpmbp2026!',
+    passkey: '135657Kn*',
     name: 'Pentadbiran Utama Hal Ehwal Pelajar KPMBP',
     dept: 'Unit Kebudayaan, Sukan & Kepimpinan Pelajar',
   },

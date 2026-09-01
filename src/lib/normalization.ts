@@ -161,3 +161,15 @@ export function validateSlug(slug: string): { isValid: boolean; error?: string }
     error: isValid ? undefined : 'Slug mestilah mengandungi huruf kecil, nombor, dan sengkang tunggal sahaja.',
   };
 }
+
+/**
+ * Auto-formats words to Title Case with 1st letter of each word capitalized.
+ * Example: "aina" -> "Aina", "nur aina" -> "Nur Aina", "mOHD" -> "Mohd"
+ */
+export function formatTitleCase(val: string): string {
+  if (!val) return '';
+  return val.replace(/\b([a-zA-Z])([a-zA-Z]*)/g, (_, first, rest) => {
+    return first.toUpperCase() + rest.toLowerCase();
+  });
+}
+
