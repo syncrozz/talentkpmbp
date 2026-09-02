@@ -99,22 +99,27 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     try {
       setLoading(true);
       const res = await fetch('/api/opportunities');
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
       const data = await res.json();
-      setOpportunities(data);
+      setOpportunities(Array.isArray(data) ? data : []);
 
       const catRes = await fetch('/api/categories');
-      const catData = await catRes.json();
-      setCategories(catData);
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(Array.isArray(catData) ? catData : []);
+      }
 
       // If initial slug passed, open directly
-      if (initialSlug) {
+      if (initialSlug && Array.isArray(data)) {
         const found = data.find((o: Opportunity) => o.slug === initialSlug);
         if (found) {
           setSelectedOpp(found);
         }
       }
     } catch (err) {
-      console.error('Error fetching opportunities:', err);
+      console.warn('Notice: opportunities data will sync on server ready:', err);
     } finally {
       setLoading(false);
     }

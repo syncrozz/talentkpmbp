@@ -199,13 +199,13 @@ export const AdminPortal: React.FC = () => {
       ]);
 
       const [oppData, appData, catData, skData, anaData, stuData, invData] = await Promise.all([
-        oppRes.json(),
-        appRes.json(),
-        catRes.json(),
-        skRes.json(),
-        anaRes.json(),
-        stuRes.json(),
-        invRes.json(),
+        oppRes.ok ? oppRes.json().catch(() => []) : [],
+        appRes.ok ? appRes.json().catch(() => []) : [],
+        catRes.ok ? catRes.json().catch(() => []) : [],
+        skRes.ok ? skRes.json().catch(() => []) : [],
+        anaRes.ok ? anaRes.json().catch(() => null) : null,
+        stuRes.ok ? stuRes.json().catch(() => []) : [],
+        invRes.ok ? invRes.json().catch(() => []) : [],
       ]);
 
       setOpportunities(Array.isArray(oppData) ? oppData : []);
